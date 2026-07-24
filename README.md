@@ -8,7 +8,7 @@
 ## 📁 프로젝트 구조 (Directory Structure)
 
 ```
-c:\Workspace\MD트리오\
+c:\Workspace\DM트리오\
 ├── data/
 │   ├── seoul_boundary/               # 원천 서울시 경계 Shapefile (EPSG:5186)
 │   └── processed/                    # 전처리 완료 공간 데이터 (EPSG:5179)

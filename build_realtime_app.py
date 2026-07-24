@@ -1,0 +1,1045 @@
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+
+from src.config import MAPS_DIR
+from src.export_interactive_data import prepare_and_export_interactive_data
+
+def generate_realtime_accessibility_html():
+    """
+    Generates an advanced real-time GIS web application supporting:
+    1. 100% Bulletproof Map-Level Point Spatial Query (Guaranteed click & hover grid selection anywhere on the map canvas)
+    2. Blue-to-Red (Cool to Warm) default color ramp
+    3. Bottom 1% low-accessibility grid highlighting (Excluding 0-score and masked grids)
+    4. Multiple distance decay functions: Gaussian, Exponential, Linear, and No Decay (Flat)
+    5. Collapsible/Hideable Top-Right Info Panel
+    6. Smooth mouse-wheel zoom controls and distinct mountain grid styling
+    """
+    js_data_path = os.path.join(MAPS_DIR, "grid_data.js")
+    if not os.path.exists(js_data_path):
+        prepare_and_export_interactive_data()
+        
+    out_html = os.path.join(MAPS_DIR, "realtime_accessibility_map.html")
+    
+    html_code = """<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>서울시 250m 격자 대중교통 접근성 실시간 시뮬레이터 지도</title>
+    
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Load Spatial Data Payload -->
+    <script src="grid_data.js"></script>
+    
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --panel-bg: rgba(15, 23, 42, 0.95);
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --accent-amber: #f59e0b;
+            --accent-pink: #ec4899;
+            --accent-emerald: #10b981;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, sans-serif; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            background: #0f172a;
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            height: 60px;
+        }
+
+        header h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #60a5fa, #f43f5e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        header .header-stats {
+            display: flex;
+            gap: 18px;
+            font-size: 0.84rem;
+        }
+
+        header .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-muted);
+        }
+
+        header .stat-item span.val {
+            color: #38bdf8;
+            font-weight: 700;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            position: relative;
+            height: calc(100vh - 60px);
+        }
+
+        /* Sidebar Controls */
+        .sidebar {
+            width: 390px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid var(--border-color);
+            padding: 18px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            z-index: 1000;
+            box-shadow: 5px 0 25px rgba(0,0,0,0.5);
+        }
+
+        .section-title {
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .control-group label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .control-group label span.val {
+            color: #38bdf8;
+            font-weight: 700;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #334155;
+            outline: none;
+            accent-color: var(--accent-blue);
+            cursor: pointer;
+        }
+
+        select {
+            background: #0f172a;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(236, 72, 153, 0.1);
+            border: 1px solid rgba(236, 72, 153, 0.3);
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .checkbox-container input {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent-pink);
+            cursor: pointer;
+        }
+
+        .checkbox-container span {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #f472b6;
+        }
+
+        /* Map Container */
+        #map {
+            flex: 1;
+            height: 100%;
+            background: #0b0f19;
+            z-index: 1;
+        }
+
+        /* Floating Info Box on Map (Collapsible & Pin Mode) */
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 16px;
+            width: 330px;
+            z-index: 999;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            font-size: 0.88rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .info-panel.pinned {
+            border-color: #f59e0b;
+        }
+
+        .info-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+        }
+
+        .info-panel-header h3 {
+            font-size: 0.95rem;
+            color: #38bdf8;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .close-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #94a3b8;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .close-btn:hover {
+            background: #ef4444;
+            color: #ffffff;
+        }
+
+        .toggle-info-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid var(--border-color);
+            color: #38bdf8;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            z-index: 998;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            display: none;
+        }
+
+        .toggle-info-btn:hover {
+            background: #1e293b;
+            color: #60a5fa;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .info-row label { color: var(--text-muted); }
+        .info-row span { font-weight: 600; }
+
+        .mask-badge {
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .vuln-badge {
+            display: inline-block;
+            background: rgba(236, 72, 153, 0.2);
+            color: #f472b6;
+            border: 1px solid rgba(236, 72, 153, 0.4);
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .pin-badge {
+            display: inline-block;
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            padding: 2px 7px;
+            border-radius: 5px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-left: 6px;
+        }
+
+        /* Map Legend */
+        .map-legend {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.94);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px 16px;
+            z-index: 999;
+            font-size: 0.8rem;
+        }
+
+        .legend-gradient {
+            height: 12px;
+            width: 240px;
+            border-radius: 6px;
+            margin: 6px 0;
+        }
+
+        .legend-labels {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-muted);
+        }
+
+        .legend-extra-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .legend-masked-color {
+            width: 14px;
+            height: 14px;
+            background: #0d1f19;
+            border: 1px solid #132c24;
+            border-radius: 3px;
+        }
+
+        .legend-vuln-color {
+            width: 14px;
+            height: 14px;
+            background: rgba(236, 72, 153, 0.5);
+            border: 2px solid #ec4899;
+            border-radius: 3px;
+        }
+
+        .chart-box {
+            height: 140px;
+            width: 100%;
+            margin-top: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🗺️ 서울시 250m 격자 대중교통 접근성 실시간 지도 시뮬레이터</h1>
+        <div class="header-stats">
+            <div class="stat-item">유효 격자: <span class="val" id="stat-valid-grid">8,274</span> 개</div>
+            <div class="stat-item">계산 시간: <span class="val" id="stat-calc-time">0 ms</span></div>
+            <div class="stat-item">최대 접근성: <span class="val" id="stat-max-score">0</span></div>
+            <div class="stat-item">하위 1% 기준점 (0점 제외): <span class="val" style="color:#f472b6;" id="stat-bottom1-cutoff">0</span></div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Sidebar Controls -->
+        <div class="sidebar">
+            <div class="section-title">
+                <span>📐 거리 감쇠 함수 선택</span>
+            </div>
+            <div class="control-group">
+                <select id="decay-mode">
+                    <option value="gaussian" selected>Gaussian Decay (가우시안 감쇠 - 곡선)</option>
+                    <option value="exponential">Exponential Decay (지수 감쇠 - 급격한 감소)</option>
+                    <option value="linear">Linear Decay (선형 감쇠 - 직선 감소)</option>
+                    <option value="none">No Decay (감쇠 없음 - 계단형 버퍼)</option>
+                </select>
+            </div>
+
+            <div class="section-title">
+                <span>⚙️ 접근거리 임계값 (R)</span>
+            </div>
+            
+            <div class="control-group">
+                <label>🚌 버스 최대 접근거리 (R_bus): <span id="val-r-bus" class="val">400m</span></label>
+                <input type="range" id="r-bus" min="100" max="1000" step="50" value="400">
+            </div>
+
+            <div class="control-group">
+                <label>🚇 지하철 최대 접근거리 (R_subway): <span id="val-r-subway" class="val">800m</span></label>
+                <input type="range" id="r-subway" min="200" max="2000" step="50" value="800">
+            </div>
+
+            <div class="section-title">
+                <span>🎯 하위 1% 접근성 소외지역 강조</span>
+            </div>
+
+            <label class="checkbox-container">
+                <input type="checkbox" id="toggle-bottom1" checked>
+                <span>⚠️ 점수 하위 1% 소외 격자 강조 표시 (0점/마스킹 제외)</span>
+            </label>
+
+            <div class="section-title">
+                <span>🎯 시설 점수 산정 (승하차인원)</span>
+            </div>
+
+            <div class="control-group">
+                <label>🚌 버스 기본 점수 (Base): <span id="val-base-bus" class="val">10점</span></label>
+                <input type="range" id="base-bus" min="0" max="50" step="1" value="10">
+            </div>
+
+            <div class="control-group">
+                <label>🚇 지하철 기본 점수 (Base): <span id="val-base-subway" class="val">50점</span></label>
+                <input type="range" id="base-subway" min="0" max="200" step="5" value="50">
+            </div>
+
+            <div class="control-group">
+                <label>📈 승하차인원 스케일링 함수:</label>
+                <select id="scaling-mode">
+                    <option value="log" selected>Logarithmic [ c × ln(1 + 이용객) ]</option>
+                    <option value="sqrt">Square Root [ c × √(이용객) ]</option>
+                    <option value="linear">Linear [ c × 이용객 ]</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>⚖️ 승하차 추가점수 계수 (c): <span id="val-p-weight" class="val">3.0</span></label>
+                <input type="range" id="p-weight" min="0.1" max="10" step="0.1" value="3.0">
+            </div>
+
+            <div class="control-group">
+                <label>🛡️ 승하차 추가점수 최대 상한선: <span id="val-max-add" class="val">50점</span></label>
+                <input type="range" id="max-add" min="10" max="200" step="5" value="50">
+            </div>
+
+            <div class="section-title">
+                <span>🎨 지도 레이어 & 색상</span>
+            </div>
+
+            <div class="control-group">
+                <label>시각화 대상 선택:</label>
+                <select id="score-target">
+                    <option value="total" selected>종합 대중교통 접근성 (버스 + 지하철)</option>
+                    <option value="bus">버스 접근성 점수</option>
+                    <option value="subway">지하철 접근성 점수</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>색상 맵 (Color Ramp):</label>
+                <select id="color-ramp">
+                    <option value="BlueRed" selected>Blue ~ Red (파랑-초록-노랑-빨강 [기본])</option>
+                    <option value="YlOrRd">Yellow-Orange-Red (열지도)</option>
+                    <option value="Viridis">Viridis (청록-노랑)</option>
+                    <option value="Plasma">Plasma (보라-주황)</option>
+                </select>
+            </div>
+
+            <div class="section-title">
+                <span>📉 실시간 감쇠 곡선 그래프</span>
+            </div>
+            <div class="chart-box">
+                <canvas id="miniChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Map Container -->
+        <div id="map"></div>
+
+        <!-- Open Info Button (shown when closed) -->
+        <button class="toggle-info-btn" id="open-info-btn" onclick="toggleInfoPanel(true)">📍 선택 정보창 펼치기</button>
+
+        <!-- Floating Info Box on Map (Collapsible & Pin Mode) -->
+        <div class="info-panel" id="info-panel">
+            <div class="info-panel-header">
+                <h3>📍 선택 격자 상세 정보 <span id="pin-indicator" style="display:none;" class="pin-badge">📌 고정됨</span></h3>
+                <button class="close-btn" onclick="toggleInfoPanel(false)" title="닫기">✕</button>
+            </div>
+            <div id="info-content">
+                <p style="color: var(--text-muted);">지도의 격자를 클릭하면 해당 격자의 상세 정보와 실시간 접근성 점수가 고정됩니다.</p>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="map-legend">
+            <div style="font-weight: 700; margin-bottom: 4px;">접근성 점수 범주</div>
+            <div class="legend-gradient" id="legend-gradient"></div>
+            <div class="legend-labels">
+                <span>0점 (최저)</span>
+                <span id="legend-max">Max점 (최고)</span>
+            </div>
+            <div class="legend-extra-item" id="legend-vuln-row">
+                <div class="legend-vuln-color"></div>
+                <span style="color:#f472b6;">⚠️ 점수 하위 1% 접근성 취약 격자 (0점 제외)</span>
+            </div>
+            <div class="legend-extra-item">
+                <div class="legend-masked-color"></div>
+                <span style="color:#10b981;">⛰️ 산지/하천/공원/미집계 영역</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if (!window.ACCESSIBILITY_DATA) {
+            alert('데이터 파일(grid_data.js)을 찾을 수 없습니다.');
+        }
+
+        const rawData = window.ACCESSIBILITY_DATA;
+        const grids = rawData.grids;
+        const buses = rawData.buses;
+        const subways = rawData.subways;
+
+        const maskedCount = grids.filter(g => g.masked).length;
+        const validCount = grids.length - maskedCount;
+        document.getElementById('stat-valid-grid').innerText = validCount.toLocaleString();
+
+        let pinnedGridIndex = -1; // Currently selected grid index
+
+        function toggleInfoPanel(show) {
+            const panel = document.getElementById('info-panel');
+            const openBtn = document.getElementById('open-info-btn');
+            if (show) {
+                panel.style.display = 'block';
+                openBtn.style.display = 'none';
+            } else {
+                panel.style.display = 'none';
+                openBtn.style.display = 'block';
+            }
+        }
+
+        // 1. Spatial Buckets for Grid Point Lookup & Facility Proximity
+        const BUCKET_SIZE = 1000;
+        const busBuckets = {};
+        const subwayBuckets = {};
+        const gridSpatialIndex = {};
+
+        buses.forEach(b => {
+            const bx = Math.floor(b.x / BUCKET_SIZE);
+            const by = Math.floor(b.y / BUCKET_SIZE);
+            const key = bx + '_' + by;
+            if (!busBuckets[key]) busBuckets[key] = [];
+            busBuckets[key].push(b);
+        });
+
+        subways.forEach(s => {
+            const sx = Math.floor(s.x / BUCKET_SIZE);
+            const sy = Math.floor(s.y / BUCKET_SIZE);
+            const key = sx + '_' + sy;
+            if (!subwayBuckets[key]) subwayBuckets[key] = [];
+            subwayBuckets[key].push(s);
+        });
+
+        // Fast Spatial Index for Grids by Lat/Lon (0.01 deg buckets ~ 1km)
+        grids.forEach((g, idx) => {
+            const latBucket = Math.floor(g.lat * 100);
+            const lonBucket = Math.floor(g.lon * 100);
+            const key = latBucket + '_' + lonBucket;
+            if (!gridSpatialIndex[key]) gridSpatialIndex[key] = [];
+            gridSpatialIndex[key].push(idx);
+        });
+
+        // Point-in-Grid Spatial Lookup Function
+        function findGridIndexAtLatLng(lat, lon) {
+            const latBucket = Math.floor(lat * 100);
+            const lonBucket = Math.floor(lon * 100);
+
+            for (let dLat = -1; dLat <= 1; dLat++) {
+                for (let dLon = -1; dLon <= 1; dLon++) {
+                    const key = (latBucket + dLat) + '_' + (lonBucket + dLon);
+                    const candidates = gridSpatialIndex[key];
+                    if (candidates) {
+                        for (let i = 0; i < candidates.length; i++) {
+                            const idx = candidates[i];
+                            const b = grids[idx].bounds; // [[minLat, minLon], [maxLat, maxLon]]
+                            if (lat >= b[0][0] && lat <= b[1][0] && lon >= b[0][1] && lon <= b[1][1]) {
+                                return idx;
+                            }
+                        }
+                    }
+                }
+            }
+            return -1;
+        }
+
+        // 2. Leaflet Map Setup
+        const map = L.map('map', {
+            center: [37.5665, 126.9780],
+            zoom: 11,
+            zoomSnap: 0.25,
+            zoomDelta: 0.25,
+            wheelPxPerZoomLevel: 220,
+            wheelDebounceTime: 60,
+            zoomControl: true
+        });
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; CartoDB',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+
+        if (rawData.gu_geojson) {
+            L.geoJSON(rawData.gu_geojson, {
+                style: {
+                    color: '#f8fafc',
+                    weight: 1.5,
+                    fillOpacity: 0,
+                    dashArray: '3, 3'
+                }
+            }).addTo(map);
+        }
+
+        // 3. Canvas Layer for Grid Polygons
+        const canvasRenderer = L.canvas({ padding: 0.5 });
+        const gridLayers = [];
+
+        grids.forEach((g, idx) => {
+            const initialColor = g.masked ? '#0d1f19' : '#1e293b';
+            const initialBorder = g.masked ? '#132c24' : '#1e293b';
+
+            const rect = L.rectangle(g.bounds, {
+                renderer: canvasRenderer,
+                stroke: true,
+                color: initialBorder,
+                weight: g.masked ? 0.3 : 0.2,
+                fill: true,
+                fillColor: initialColor,
+                fillOpacity: g.masked ? 0.6 : 0.7,
+                interactive: false // Map handles clicks and hovers spatially
+            });
+
+            rect.addTo(map);
+            gridLayers.push(rect);
+        });
+
+        // 4. Map-Level Click & Hover Spatial Event Listeners (100% Reliable Grid Selection)
+        map.on('click', function(e) {
+            const clickedIdx = findGridIndexAtLatLng(e.latlng.lat, e.latlng.lng);
+            if (clickedIdx >= 0) {
+                pinGridByIndex(clickedIdx);
+            } else {
+                unpinGrid();
+            }
+        });
+
+        let hoverIdx = -1;
+        map.on('mousemove', function(e) {
+            const curHover = findGridIndexAtLatLng(e.latlng.lat, e.latlng.lng);
+            if (curHover !== hoverIdx) {
+                if (hoverIdx >= 0 && hoverIdx !== pinnedGridIndex) {
+                    resetGridStyle(hoverIdx);
+                }
+                hoverIdx = curHover;
+                if (hoverIdx >= 0 && hoverIdx !== pinnedGridIndex) {
+                    gridLayers[hoverIdx].setStyle({ weight: 2.2, color: '#38bdf8' });
+                    if (pinnedGridIndex < 0) {
+                        showGridInfo(grids[hoverIdx], false);
+                    }
+                }
+            }
+        });
+
+        function resetGridStyle(idx) {
+            if (idx < 0 || idx >= grids.length) return;
+            const g = grids[idx];
+            const isVuln = g.isBottom1 && document.getElementById('toggle-bottom1').checked;
+            const borderCol = (idx === pinnedGridIndex) ? '#f59e0b' : (isVuln ? '#ec4899' : (g.masked ? '#132c24' : '#1e293b'));
+            const borderWeight = (idx === pinnedGridIndex) ? 3.0 : (isVuln ? 1.6 : (g.masked ? 0.3 : 0.2));
+            gridLayers[idx].setStyle({ weight: borderWeight, color: borderCol });
+        }
+
+        function pinGridByIndex(idx) {
+            const oldPinned = pinnedGridIndex;
+            pinnedGridIndex = idx;
+            if (oldPinned >= 0) resetGridStyle(oldPinned);
+            
+            if (pinnedGridIndex >= 0) {
+                const g = grids[pinnedGridIndex];
+                gridLayers[pinnedGridIndex].setStyle({ weight: 3.0, color: '#f59e0b' });
+                gridLayers[pinnedGridIndex].bringToFront();
+
+                document.getElementById('info-panel').classList.add('pinned');
+                document.getElementById('pin-indicator').style.display = 'inline-block';
+                toggleInfoPanel(true);
+                showGridInfo(g, true);
+            }
+        }
+
+        function unpinGrid() {
+            if (pinnedGridIndex >= 0) {
+                const old = pinnedGridIndex;
+                pinnedGridIndex = -1;
+                resetGridStyle(old);
+                document.getElementById('info-panel').classList.remove('pinned');
+                document.getElementById('pin-indicator').style.display = 'none';
+                document.getElementById('info-content').innerHTML = `<p style="color: var(--text-muted);">지도의 격자를 클릭하면 해당 격자의 상세 정보와 실시간 접근성 점수가 고정됩니다.</p>`;
+            }
+        }
+
+        // 5. Distance Decay Weight Functions
+        function calculateDecayWeight(d, R, decayMode) {
+            if (d < 0 || d > R) return 0.0;
+            if (decayMode === 'none') {
+                return 1.0;
+            } else if (decayMode === 'linear') {
+                return 1.0 - (d / R);
+            } else if (decayMode === 'exponential') {
+                const lambda = 3.0;
+                const expVal = Math.exp(-lambda * (d / R));
+                const expMin = Math.exp(-lambda);
+                return (expVal - expMin) / (1.0 - expMin);
+            } else {
+                // Gaussian Decay
+                const expD = Math.exp(-0.5 * Math.pow(d / R, 2));
+                const expHalf = Math.exp(-0.5);
+                return (expD - expHalf) / (1.0 - expHalf);
+            }
+        }
+
+        function calcFacilityScore(baseScore, passCount, mode, weight, maxAdd) {
+            let add = 0;
+            if (mode === 'log') {
+                add = Math.log1p(passCount) * weight;
+            } else if (mode === 'sqrt') {
+                add = Math.sqrt(passCount) * weight * 0.1;
+            } else if (mode === 'linear') {
+                add = passCount * weight * 0.001;
+            }
+            add = Math.min(add, maxAdd);
+            return baseScore + add;
+        }
+
+        // Color Ramp Generator
+        function getColor(val, maxVal, rampName, isMasked) {
+            if (isMasked) return '#0d1f19';
+            if (maxVal <= 0 || val <= 0) return '#1e293b';
+            const ratio = Math.min(val / maxVal, 1.0);
+
+            if (rampName === 'BlueRed') {
+                const hue = (1.0 - ratio) * 240; // 240=Blue, 180=Cyan, 120=Green, 60=Yellow, 0=Red
+                return `hsla(${hue}, 85%, 52%, ${0.5 + ratio * 0.4})`;
+            } else if (rampName === 'YlOrRd') {
+                if (ratio < 0.25) return `rgba(254, 240, 178, ${0.45 + ratio * 0.35})`;
+                if (ratio < 0.50) return `rgba(253, 187, 132, ${0.55 + ratio * 0.35})`;
+                if (ratio < 0.75) return `rgba(252, 141, 89, ${0.65 + ratio * 0.35})`;
+                return `rgba(215, 48, 31, ${0.75 + ratio * 0.25})`;
+            } else if (rampName === 'Viridis') {
+                const r = Math.round(68 + ratio * (253 - 68));
+                const g = Math.round(1 + ratio * (231 - 1));
+                const b = Math.round(84 + (1 - ratio) * 150);
+                return `rgba(${r}, ${g}, ${b}, ${0.55 + ratio * 0.4})`;
+            } else if (rampName === 'Plasma') {
+                const r = Math.round(13 + ratio * (240 - 13));
+                const g = Math.round(8 + ratio * (249 - 8));
+                const b = Math.round(135 + (1 - ratio) * 100);
+                return `rgba(${r}, ${g}, ${b}, ${0.55 + ratio * 0.4})`;
+            }
+        }
+
+        // 6. Recalculation Engine
+        let miniChart;
+
+        function recalculateAccessibility() {
+            const t0 = performance.now();
+
+            const decayMode = document.getElementById('decay-mode').value;
+            const rBus = parseFloat(document.getElementById('r-bus').value);
+            const rSubway = parseFloat(document.getElementById('r-subway').value);
+            const baseBus = parseFloat(document.getElementById('base-bus').value);
+            const baseSubway = parseFloat(document.getElementById('base-subway').value);
+            const mode = document.getElementById('scaling-mode').value;
+            const pWeight = parseFloat(document.getElementById('p-weight').value);
+            const maxAdd = parseFloat(document.getElementById('max-add').value);
+            const scoreTarget = document.getElementById('score-target').value;
+            const colorRamp = document.getElementById('color-ramp').value;
+            const showBottom1 = document.getElementById('toggle-bottom1').checked;
+
+            document.getElementById('val-r-bus').innerText = rBus + 'm';
+            document.getElementById('val-r-subway').innerText = rSubway + 'm';
+            document.getElementById('val-base-bus').innerText = baseBus + '점';
+            document.getElementById('val-base-subway').innerText = baseSubway + '점';
+            document.getElementById('val-p-weight').innerText = pWeight.toFixed(1);
+            document.getElementById('val-max-add').innerText = maxAdd + '점';
+
+            const busFacScores = buses.map(b => calcFacilityScore(baseBus, b.passengers, mode, pWeight, maxAdd));
+            const subFacScores = subways.map(s => calcFacilityScore(baseSubway, s.passengers, mode, pWeight, maxAdd));
+
+            let maxScore = 0.0;
+            const validNonZeroScores = [];
+
+            const busBucketRange = Math.ceil(rBus / BUCKET_SIZE);
+            const subBucketRange = Math.ceil(rSubway / BUCKET_SIZE);
+
+            grids.forEach((g, idx) => {
+                const gx = g.cx;
+                const gy = g.cy;
+
+                const gbx = Math.floor(gx / BUCKET_SIZE);
+                const gby = Math.floor(gy / BUCKET_SIZE);
+
+                let busScore = 0.0;
+                let busCount = 0;
+
+                for (let dx = -busBucketRange; dx <= busBucketRange; dx++) {
+                    for (let dy = -busBucketRange; dy <= busBucketRange; dy++) {
+                        const key = (gbx + dx) + '_' + (gby + dy);
+                        const bList = busBuckets[key];
+                        if (bList) {
+                            for (let i = 0; i < bList.length; i++) {
+                                const b = bList[i];
+                                const dist = Math.hypot(gx - b.x, gy - b.y);
+                                if (dist <= rBus) {
+                                    busCount++;
+                                    busScore += calculateDecayWeight(dist, rBus, decayMode) * busFacScores[b.id];
+                                }
+                            }
+                        }
+                    }
+                }
+
+                let subScore = 0.0;
+                let subCount = 0;
+
+                for (let dx = -subBucketRange; dx <= subBucketRange; dx++) {
+                    for (let dy = -subBucketRange; dy <= subBucketRange; dy++) {
+                        const key = (gbx + dx) + '_' + (gby + dy);
+                        const sList = subwayBuckets[key];
+                        if (sList) {
+                            for (let i = 0; i < sList.length; i++) {
+                                const s = sList[i];
+                                const dist = Math.hypot(gx - s.x, gy - s.y);
+                                if (dist <= rSubway) {
+                                    subCount++;
+                                    subScore += calculateDecayWeight(dist, rSubway, decayMode) * subFacScores[s.id];
+                                }
+                            }
+                        }
+                    }
+                }
+
+                g.busScore = busScore;
+                g.subScore = subScore;
+                g.busCount = busCount;
+                g.subCount = subCount;
+                g.totalScore = busScore + subScore;
+
+                let targetVal = g.totalScore;
+                if (scoreTarget === 'bus') targetVal = g.busScore;
+                if (scoreTarget === 'subway') targetVal = g.subScore;
+
+                g.currentScore = targetVal;
+
+                if (!g.masked) {
+                    if (targetVal > maxScore) maxScore = targetVal;
+                    if (targetVal > 0) {
+                        validNonZeroScores.push(targetVal);
+                    }
+                }
+            });
+
+            // Bottom 1% Quantile Cutoff Calculation
+            validNonZeroScores.sort((a, b) => a - b);
+            let cutoff1 = 0.0;
+            if (validNonZeroScores.length > 0) {
+                const idx1 = Math.floor(validNonZeroScores.length * 0.01);
+                cutoff1 = validNonZeroScores[idx1] || validNonZeroScores[0];
+            }
+            document.getElementById('stat-bottom1-cutoff').innerText = cutoff1.toFixed(1) + '점';
+
+            // Update Map Grid Colors and Styles
+            grids.forEach((g, idx) => {
+                g.isBottom1 = (!g.masked && g.currentScore > 0 && g.currentScore <= cutoff1);
+                const fillColor = getColor(g.currentScore, maxScore, colorRamp, g.masked);
+
+                const isPinned = (pinnedGridIndex === idx);
+                let strokeColor = g.masked ? '#132c24' : '#1e293b';
+                let strokeW = g.masked ? 0.3 : 0.2;
+
+                if (isPinned) {
+                    strokeColor = '#f59e0b'; // Gold for pinned grid
+                    strokeW = 3.0;
+                } else if (showBottom1 && g.isBottom1) {
+                    strokeColor = '#ec4899'; // Bright Magenta border for Bottom 1%
+                    strokeW = 1.6;
+                }
+
+                gridLayers[idx].setStyle({
+                    fillColor: fillColor,
+                    fillOpacity: g.masked ? 0.55 : (g.currentScore > 0 ? 0.8 : 0.15),
+                    color: strokeColor,
+                    weight: strokeW
+                });
+            });
+
+            const t1 = performance.now();
+
+            document.getElementById('stat-calc-time').innerText = Math.round(t1 - t0) + ' ms';
+            document.getElementById('stat-max-score').innerText = maxScore.toFixed(1);
+            document.getElementById('legend-max').innerText = maxScore.toFixed(1) + '점';
+
+            // Update Legend Gradient Display
+            const legGrad = document.getElementById('legend-gradient');
+            if (colorRamp === 'BlueRed') {
+                legGrad.style.background = 'linear-gradient(to right, #3b82f6, #06b6d4, #10b981, #eab308, #ef4444)';
+            } else if (colorRamp === 'YlOrRd') {
+                legGrad.style.background = 'linear-gradient(to right, #1e293b, #fef0d9, #fdbb84, #fc8d59, #d7301f)';
+            } else if (colorRamp === 'Viridis') {
+                legGrad.style.background = 'linear-gradient(to right, #1e293b, #440154, #21908d, #fde725)';
+            } else if (colorRamp === 'Plasma') {
+                legGrad.style.background = 'linear-gradient(to right, #1e293b, #0d0887, #cc4678, #f0f921)';
+            }
+
+            document.getElementById('legend-vuln-row').style.display = showBottom1 ? 'flex' : 'none';
+
+            // Refresh pinned grid display if pinned
+            if (pinnedGridIndex >= 0) {
+                showGridInfo(grids[pinnedGridIndex], true);
+            }
+
+            updateMiniChart(rBus, rSubway, decayMode);
+        }
+
+        function showGridInfo(g, isPinned) {
+            const container = document.getElementById('info-content');
+            const maskHtml = g.masked ? `<div class="mask-badge">⛰️ 산지/하천/공원/미집계 마스킹 영역</div>` : ``;
+            const vulnHtml = (!g.masked && g.isBottom1) ? `<div class="vuln-badge">⚠️ 점수 하위 1% 대중교통 접근성 취약 격자</div>` : ``;
+            
+            container.innerHTML = `
+                ${maskHtml}
+                ${vulnHtml}
+                <div class="info-row"><label>격자 코드:</label> <span>${g.code}</span></div>
+                <div class="info-row"><label>행정구역:</label> <span>${g.address || (g.gu + ' ' + g.dong)}</span></div>
+                <div class="info-row"><label>평균 생활인구:</label> <span>${g.masked ? '미집계 (0명)' : g.pop.toLocaleString() + ' 명'}</span></div>
+                <hr style="border-color: var(--border-color); margin: 8px 0;">
+                <div class="info-row"><label>종합 접근성 점수:</label> <span style="color:#f59e0b; font-size:1.05rem;">${(g.totalScore || 0).toFixed(1)} 점</span></div>
+                <div class="info-row"><label>🚌 버스 접근성 점수:</label> <span style="color:#60a5fa;">${(g.busScore || 0).toFixed(1)} 점 (${g.busCount || 0}개)</span></div>
+                <div class="info-row"><label>🚇 지하철 접근성 점수:</label> <span style="color:#c084fc;">${(g.subScore || 0).toFixed(1)} 점 (${g.subCount || 0}개)</span></div>
+            `;
+        }
+
+        function updateMiniChart(rBus, rSubway, decayMode) {
+            const maxD = Math.max(rBus, rSubway);
+            const dists = [];
+            const wB = [];
+            const wS = [];
+
+            for (let d = 0; d <= maxD; d += maxD / 20) {
+                dists.push(Math.round(d) + 'm');
+                wB.push(calculateDecayWeight(d, rBus, decayMode).toFixed(2));
+                wS.push(calculateDecayWeight(d, rSubway, decayMode).toFixed(2));
+            }
+
+            miniChart.data.labels = dists;
+            miniChart.data.datasets[0].data = wB;
+            miniChart.data.datasets[1].data = wS;
+            miniChart.update();
+        }
+
+        window.onload = function() {
+            const ctx = document.getElementById('miniChart').getContext('2d');
+            miniChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: '버스 W(d, R_bus)', borderColor: '#3b82f6', data: [], borderWidth: 2, pointRadius: 0 },
+                        { label: '지하철 W(d, R_subway)', borderColor: '#a855f7', data: [], borderWidth: 2, pointRadius: 0 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { ticks: { color: '#94a3b8', font: { size: 9 } } },
+                        y: { min: 0, max: 1, ticks: { color: '#94a3b8', font: { size: 9 } } }
+                    },
+                    plugins: { legend: { labels: { color: '#f8fafc', font: { size: 10 } } } }
+                }
+            });
+
+            const inputs = ['r-bus', 'r-subway', 'base-bus', 'base-subway', 'scaling-mode', 'p-weight', 'max-add', 'score-target', 'color-ramp', 'decay-mode', 'toggle-bottom1'];
+            inputs.forEach(id => {
+                const elem = document.getElementById(id);
+                if (elem) {
+                    elem.addEventListener('input', recalculateAccessibility);
+                    elem.addEventListener('change', recalculateAccessibility);
+                }
+            });
+
+            recalculateAccessibility();
+        };
+    </script>
+</body>
+</html>
+"""
+    with open(out_html, "w", encoding="utf-8") as f:
+        f.write(html_code)
+        
+    print(f"[AppBuilder] Successfully updated spatial lookup grid engine at: {out_html}")
+    return out_html
+
+if __name__ == '__main__':
+    generate_realtime_accessibility_html()
