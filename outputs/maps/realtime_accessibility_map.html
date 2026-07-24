@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>서울시 250m 격자 대중교통 접근성 실시간 시뮬레이터 지도</title>
+    <title>서울시 250m 격자 & 행정구역 대중교통 접근성 실시간 지도 시뮬레이터</title>
     
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -55,7 +55,7 @@
         }
 
         header h1 {
-            font-size: 1.3rem;
+            font-size: 1.22rem;
             font-weight: 700;
             background: linear-gradient(90deg, #60a5fa, #f43f5e);
             -webkit-background-clip: text;
@@ -64,8 +64,8 @@
 
         header .header-stats {
             display: flex;
-            gap: 18px;
-            font-size: 0.84rem;
+            gap: 16px;
+            font-size: 0.83rem;
         }
 
         header .stat-item {
@@ -89,7 +89,7 @@
 
         /* Sidebar Controls */
         .sidebar {
-            width: 390px;
+            width: 410px;
             background: var(--panel-bg);
             backdrop-filter: blur(12px);
             border-right: 1px solid var(--border-color);
@@ -97,13 +97,13 @@
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 15px;
             z-index: 1000;
             box-shadow: 5px 0 25px rgba(0,0,0,0.5);
         }
 
         .section-title {
-            font-size: 0.98rem;
+            font-size: 0.95rem;
             font-weight: 700;
             color: #f1f5f9;
             border-bottom: 2px solid var(--border-color);
@@ -158,7 +158,7 @@
             gap: 10px;
             background: rgba(236, 72, 153, 0.1);
             border: 1px solid rgba(236, 72, 153, 0.3);
-            padding: 10px 14px;
+            padding: 9px 12px;
             border-radius: 8px;
             cursor: pointer;
             user-select: none;
@@ -172,7 +172,7 @@
         }
 
         .checkbox-container span {
-            font-size: 0.85rem;
+            font-size: 0.83rem;
             font-weight: 700;
             color: #f472b6;
         }
@@ -185,20 +185,22 @@
             z-index: 1;
         }
 
-        /* Floating Info Box on Map (Collapsible & Pin Mode) */
+        /* Floating Info Box on Map */
         .info-panel {
             position: absolute;
             top: 20px;
             right: 20px;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(12px);
+            background: rgba(15, 23, 42, 0.96);
+            backdrop-filter: blur(14px);
             border: 1.5px solid var(--border-color);
             border-radius: 12px;
             padding: 14px 16px;
-            width: 330px;
+            width: 375px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
             z-index: 999;
             box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-            font-size: 0.88rem;
+            font-size: 0.86rem;
             transition: border-color 0.2s ease;
         }
 
@@ -269,7 +271,7 @@
         .info-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 6px;
+            margin-bottom: 5px;
         }
 
         .info-row label { color: var(--text-muted); }
@@ -280,6 +282,18 @@
             background: rgba(16, 185, 129, 0.15);
             color: #10b981;
             border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .rank-badge {
+            display: inline-block;
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.4);
             padding: 3px 8px;
             border-radius: 6px;
             font-size: 0.78rem;
@@ -309,6 +323,61 @@
             font-size: 0.75rem;
             font-weight: 700;
             margin-left: 6px;
+        }
+
+        /* Formula Breakdown Box */
+        .breakdown-box {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px dashed rgba(56, 189, 248, 0.4);
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-top: 8px;
+            font-size: 0.79rem;
+        }
+
+        .breakdown-box h4 {
+            color: #38bdf8;
+            font-size: 0.83rem;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .breakdown-item {
+            background: rgba(30, 41, 59, 0.6);
+            border-left: 3.5px solid var(--accent-blue);
+            padding: 6px 9px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+        }
+
+        .breakdown-item.subway {
+            border-left-color: var(--accent-purple);
+        }
+
+        .breakdown-item.pop {
+            border-left-color: var(--accent-amber);
+        }
+
+        .breakdown-item .title {
+            font-weight: 700;
+            color: #f8fafc;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+        }
+
+        .breakdown-item .formula {
+            color: #94a3b8;
+            font-family: monospace;
+            font-size: 0.74rem;
+            line-height: 1.35;
+        }
+
+        .breakdown-item .highlight {
+            color: #f59e0b;
+            font-weight: 700;
         }
 
         /* Map Legend */
@@ -363,7 +432,7 @@
         }
 
         .chart-box {
-            height: 140px;
+            height: 130px;
             width: 100%;
             margin-top: 6px;
         }
@@ -372,18 +441,50 @@
 <body>
 
     <header>
-        <h1>🗺️ 서울시 250m 격자 대중교통 접근성 실시간 지도 시뮬레이터</h1>
+        <h1>🗺️ 서울시 250m 격자 & 행정구역 대중교통 접근성 지도</h1>
         <div class="header-stats">
-            <div class="stat-item">유효 격자: <span class="val" id="stat-valid-grid">8,274</span> 개</div>
+            <div class="stat-item">표시 단위: <span class="val" style="color:#60a5fa;" id="stat-view-mode-label">250m 격자</span></div>
             <div class="stat-item">계산 시간: <span class="val" id="stat-calc-time">0 ms</span></div>
-            <div class="stat-item">최대 접근성: <span class="val" id="stat-max-score">0</span></div>
-            <div class="stat-item">하위 1% 기준점 (0점 제외): <span class="val" style="color:#f472b6;" id="stat-bottom1-cutoff">0</span></div>
+            <div class="stat-item">최대 수치: <span class="val" id="stat-max-score">0</span></div>
+            <div class="stat-item">하위 1% 기준점: <span class="val" style="color:#f472b6;" id="stat-bottom1-cutoff">0</span></div>
         </div>
     </header>
 
     <div class="main-container">
         <!-- Sidebar Controls -->
         <div class="sidebar">
+            <div class="section-title">
+                <span>🗺️ 공간 분석 단위 선택 (Grid / Dong / Gu)</span>
+            </div>
+            <div class="control-group">
+                <select id="spatial-view-mode" style="background:#1e293b; border-color:#38bdf8; font-weight:700; color:#38bdf8;">
+                    <option value="grid" selected>📍 250m 격자 단위 (10,125개 [기본])</option>
+                    <option value="dong">🏙️ 행정동 단위 합산/평균 (427개 동)</option>
+                    <option value="gu">🏛️ 자치구 단위 합산/평균 (25개 구)</option>
+                </select>
+            </div>
+
+            <div class="section-title">
+                <span>🎯 시각화 분석 지표 선택</span>
+            </div>
+            <div class="control-group">
+                <select id="score-target" style="background:#0f172a; border-color:#f59e0b; font-weight:700; color:#f59e0b;">
+                    <option value="pop_adjusted" selected>👥 인구를 고려한 교통이동성 [교통이동성 / ln(생활인구)]</option>
+                    <option value="raw_mobility">🚌🚇 순수 교통이동성 [ ∑(거리감쇠계수 × 시설점수) ]</option>
+                    <option value="bus">🚌 버스 교통이동성</option>
+                    <option value="subway">🚇 지하철 교통이동성</option>
+                </select>
+            </div>
+
+            <div class="control-group" id="group-agg-metric" style="display:none;">
+                <label>📊 행정구역 집계 수치 기준:</label>
+                <select id="agg-metric">
+                    <option value="mean" selected>평균 수치 (Mean [추천])</option>
+                    <option value="sum">총 누적 합산 수치 (Total Sum)</option>
+                    <option value="max">최대 수치 (Max)</option>
+                </select>
+            </div>
+
             <div class="section-title">
                 <span>📐 거리 감쇠 함수 선택</span>
             </div>
@@ -410,59 +511,17 @@
                 <input type="range" id="r-subway" min="200" max="2000" step="50" value="800">
             </div>
 
-            <div class="section-title">
+            <div class="section-title" id="sec-bottom1-title">
                 <span>🎯 하위 1% 접근성 소외지역 강조</span>
             </div>
 
-            <label class="checkbox-container">
+            <label class="checkbox-container" id="container-bottom1">
                 <input type="checkbox" id="toggle-bottom1" checked>
-                <span>⚠️ 점수 하위 1% 소외 격자 강조 표시 (0점/마스킹 제외)</span>
+                <span>⚠️ 지표 하위 1% 소외 격자 강조 표시 (0점/마스킹 제외)</span>
             </label>
 
             <div class="section-title">
-                <span>🎯 시설 점수 산정 (승하차인원)</span>
-            </div>
-
-            <div class="control-group">
-                <label>🚌 버스 기본 점수 (Base): <span id="val-base-bus" class="val">10점</span></label>
-                <input type="range" id="base-bus" min="0" max="50" step="1" value="10">
-            </div>
-
-            <div class="control-group">
-                <label>🚇 지하철 기본 점수 (Base): <span id="val-base-subway" class="val">50점</span></label>
-                <input type="range" id="base-subway" min="0" max="200" step="5" value="50">
-            </div>
-
-            <div class="control-group">
-                <label>📈 승하차인원 스케일링 함수:</label>
-                <select id="scaling-mode">
-                    <option value="log" selected>Logarithmic [ c × ln(1 + 이용객) ]</option>
-                    <option value="sqrt">Square Root [ c × √(이용객) ]</option>
-                    <option value="linear">Linear [ c × 이용객 ]</option>
-                </select>
-            </div>
-
-            <div class="control-group">
-                <label>⚖️ 승하차 추가점수 계수 (c): <span id="val-p-weight" class="val">3.0</span></label>
-                <input type="range" id="p-weight" min="0.1" max="10" step="0.1" value="3.0">
-            </div>
-
-            <div class="control-group">
-                <label>🛡️ 승하차 추가점수 최대 상한선: <span id="val-max-add" class="val">50점</span></label>
-                <input type="range" id="max-add" min="10" max="200" step="5" value="50">
-            </div>
-
-            <div class="section-title">
                 <span>🎨 지도 레이어 & 색상</span>
-            </div>
-
-            <div class="control-group">
-                <label>시각화 대상 선택:</label>
-                <select id="score-target">
-                    <option value="total" selected>종합 대중교통 접근성 (버스 + 지하철)</option>
-                    <option value="bus">버스 접근성 점수</option>
-                    <option value="subway">지하철 접근성 점수</option>
-                </select>
             </div>
 
             <div class="control-group">
@@ -489,20 +548,20 @@
         <!-- Open Info Button (shown when closed) -->
         <button class="toggle-info-btn" id="open-info-btn" onclick="toggleInfoPanel(true)">📍 선택 정보창 펼치기</button>
 
-        <!-- Floating Info Box on Map (Collapsible & Pin Mode) -->
+        <!-- Floating Info Box on Map -->
         <div class="info-panel" id="info-panel">
             <div class="info-panel-header">
-                <h3>📍 선택 격자 상세 정보 <span id="pin-indicator" style="display:none;" class="pin-badge">📌 고정됨</span></h3>
+                <h3>📍 선택 대상 상세 정보 <span id="pin-indicator" style="display:none;" class="pin-badge">📌 고정됨</span></h3>
                 <button class="close-btn" onclick="toggleInfoPanel(false)" title="닫기">✕</button>
             </div>
             <div id="info-content">
-                <p style="color: var(--text-muted);">지도의 격자를 클릭하면 해당 격자의 상세 정보와 실시간 접근성 점수가 고정됩니다.</p>
+                <p style="color: var(--text-muted);">지도의 격자나 행정구역을 클릭하면 상세 수치와 수식 분해가 출력됩니다.</p>
             </div>
         </div>
 
         <!-- Legend -->
         <div class="map-legend">
-            <div style="font-weight: 700; margin-bottom: 4px;">접근성 점수 범주</div>
+            <div style="font-weight: 700; margin-bottom: 4px;" id="legend-title-label">접근성 점수 범주</div>
             <div class="legend-gradient" id="legend-gradient"></div>
             <div class="legend-labels">
                 <span>0점 (최저)</span>
@@ -510,9 +569,9 @@
             </div>
             <div class="legend-extra-item" id="legend-vuln-row">
                 <div class="legend-vuln-color"></div>
-                <span style="color:#f472b6;">⚠️ 점수 하위 1% 접근성 취약 격자 (0점 제외)</span>
+                <span style="color:#f472b6;">⚠️ 점수 하위 1% 접근성 취약 격자</span>
             </div>
-            <div class="legend-extra-item">
+            <div class="legend-extra-item" id="legend-masked-row">
                 <div class="legend-masked-color"></div>
                 <span style="color:#10b981;">⛰️ 산지/하천/공원/미집계 영역</span>
             </div>
@@ -531,9 +590,15 @@
 
         const maskedCount = grids.filter(g => g.masked).length;
         const validCount = grids.length - maskedCount;
-        document.getElementById('stat-valid-grid').innerText = validCount.toLocaleString();
 
-        let pinnedGridIndex = -1; // Currently selected grid index
+        // Compute City-wide Median Passengers for Buses & Subways
+        const busPassengers = buses.map(b => b.passengers).sort((a, b) => a - b);
+        const subwayPassengers = subways.map(s => s.passengers).sort((a, b) => a - b);
+        const medianBusPassengers = busPassengers[Math.floor(busPassengers.length / 2)] || 1;
+        const medianSubwayPassengers = subwayPassengers[Math.floor(subwayPassengers.length / 2)] || 1;
+
+        let pinnedGridIndex = -1;
+        let pinnedRegionKey = null;
 
         function toggleInfoPanel(show) {
             const panel = document.getElementById('info-panel');
@@ -547,7 +612,7 @@
             }
         }
 
-        // 1. Spatial Buckets for Grid Point Lookup & Facility Proximity
+        // 1. Spatial Buckets
         const BUCKET_SIZE = 1000;
         const busBuckets = {};
         const subwayBuckets = {};
@@ -569,7 +634,6 @@
             subwayBuckets[key].push(s);
         });
 
-        // Fast Spatial Index for Grids by Lat/Lon (0.01 deg buckets ~ 1km)
         grids.forEach((g, idx) => {
             const latBucket = Math.floor(g.lat * 100);
             const lonBucket = Math.floor(g.lon * 100);
@@ -578,7 +642,6 @@
             gridSpatialIndex[key].push(idx);
         });
 
-        // Point-in-Grid Spatial Lookup Function
         function findGridIndexAtLatLng(lat, lon) {
             const latBucket = Math.floor(lat * 100);
             const lonBucket = Math.floor(lon * 100);
@@ -590,7 +653,7 @@
                     if (candidates) {
                         for (let i = 0; i < candidates.length; i++) {
                             const idx = candidates[i];
-                            const b = grids[idx].bounds; // [[minLat, minLon], [maxLat, maxLon]]
+                            const b = grids[idx].bounds;
                             if (lat >= b[0][0] && lat <= b[1][0] && lon >= b[0][1] && lon <= b[1][1]) {
                                 return idx;
                             }
@@ -618,20 +681,10 @@
             maxZoom: 19
         }).addTo(map);
 
-        if (rawData.gu_geojson) {
-            L.geoJSON(rawData.gu_geojson, {
-                style: {
-                    color: '#f8fafc',
-                    weight: 1.5,
-                    fillOpacity: 0,
-                    dashArray: '3, 3'
-                }
-            }).addTo(map);
-        }
-
-        // 3. Canvas Layer for Grid Polygons
         const canvasRenderer = L.canvas({ padding: 0.5 });
         const gridLayers = [];
+        let guLayerGroup = L.layerGroup().addTo(map);
+        let dongLayerGroup = L.layerGroup().addTo(map);
 
         grids.forEach((g, idx) => {
             const initialColor = g.masked ? '#0d1f19' : '#1e293b';
@@ -645,35 +698,40 @@
                 fill: true,
                 fillColor: initialColor,
                 fillOpacity: g.masked ? 0.6 : 0.7,
-                interactive: false // Map handles clicks and hovers spatially
+                interactive: false
             });
 
             rect.addTo(map);
             gridLayers.push(rect);
         });
 
-        // 4. Map-Level Click & Hover Spatial Event Listeners (100% Reliable Grid Selection)
         map.on('click', function(e) {
-            const clickedIdx = findGridIndexAtLatLng(e.latlng.lat, e.latlng.lng);
-            if (clickedIdx >= 0) {
-                pinGridByIndex(clickedIdx);
-            } else {
-                unpinGrid();
+            const viewMode = document.getElementById('spatial-view-mode').value;
+            if (viewMode === 'grid') {
+                const clickedIdx = findGridIndexAtLatLng(e.latlng.lat, e.latlng.lng);
+                if (clickedIdx >= 0) {
+                    pinGridByIndex(clickedIdx);
+                } else {
+                    unpinGrid();
+                }
             }
         });
 
         let hoverIdx = -1;
         map.on('mousemove', function(e) {
-            const curHover = findGridIndexAtLatLng(e.latlng.lat, e.latlng.lng);
-            if (curHover !== hoverIdx) {
-                if (hoverIdx >= 0 && hoverIdx !== pinnedGridIndex) {
-                    resetGridStyle(hoverIdx);
-                }
-                hoverIdx = curHover;
-                if (hoverIdx >= 0 && hoverIdx !== pinnedGridIndex) {
-                    gridLayers[hoverIdx].setStyle({ weight: 2.2, color: '#38bdf8' });
-                    if (pinnedGridIndex < 0) {
-                        showGridInfo(grids[hoverIdx], false);
+            const viewMode = document.getElementById('spatial-view-mode').value;
+            if (viewMode === 'grid') {
+                const curHover = findGridIndexAtLatLng(e.latlng.lat, e.latlng.lng);
+                if (curHover !== hoverIdx) {
+                    if (hoverIdx >= 0 && hoverIdx !== pinnedGridIndex) {
+                        resetGridStyle(hoverIdx);
+                    }
+                    hoverIdx = curHover;
+                    if (hoverIdx >= 0 && hoverIdx !== pinnedGridIndex) {
+                        gridLayers[hoverIdx].setStyle({ weight: 2.2, color: '#38bdf8' });
+                        if (pinnedGridIndex < 0) {
+                            showGridInfo(grids[hoverIdx], false);
+                        }
                     }
                 }
             }
@@ -712,11 +770,11 @@
                 resetGridStyle(old);
                 document.getElementById('info-panel').classList.remove('pinned');
                 document.getElementById('pin-indicator').style.display = 'none';
-                document.getElementById('info-content').innerHTML = `<p style="color: var(--text-muted);">지도의 격자를 클릭하면 해당 격자의 상세 정보와 실시간 접근성 점수가 고정됩니다.</p>`;
+                document.getElementById('info-content').innerHTML = `<p style="color: var(--text-muted);">지도의 격자를 클릭하면 해당 격자의 상세 정보와 실시간 접근성 수치가 고정됩니다.</p>`;
             }
         }
 
-        // 5. Distance Decay Weight Functions
+        // 3. Distance Decay Functions
         function calculateDecayWeight(d, R, decayMode) {
             if (d < 0 || d > R) return 0.0;
             if (decayMode === 'none') {
@@ -729,34 +787,25 @@
                 const expMin = Math.exp(-lambda);
                 return (expVal - expMin) / (1.0 - expMin);
             } else {
-                // Gaussian Decay
                 const expD = Math.exp(-0.5 * Math.pow(d / R, 2));
                 const expHalf = Math.exp(-0.5);
                 return (expD - expHalf) / (1.0 - expHalf);
             }
         }
 
-        function calcFacilityScore(baseScore, passCount, mode, weight, maxAdd) {
-            let add = 0;
-            if (mode === 'log') {
-                add = Math.log1p(passCount) * weight;
-            } else if (mode === 'sqrt') {
-                add = Math.sqrt(passCount) * weight * 0.1;
-            } else if (mode === 'linear') {
-                add = passCount * weight * 0.001;
-            }
-            add = Math.min(add, maxAdd);
-            return baseScore + add;
+        // USER'S NEW FACILITY SCORE FORMULA: ln(1 + passengers / median_passengers)
+        function calcFacilityScore(passCount, medianPass) {
+            const ratio = passCount / (medianPass || 1);
+            return Math.log1p(ratio);
         }
 
-        // Color Ramp Generator
         function getColor(val, maxVal, rampName, isMasked) {
             if (isMasked) return '#0d1f19';
             if (maxVal <= 0 || val <= 0) return '#1e293b';
             const ratio = Math.min(val / maxVal, 1.0);
 
             if (rampName === 'BlueRed') {
-                const hue = (1.0 - ratio) * 240; // 240=Blue, 180=Cyan, 120=Green, 60=Yellow, 0=Red
+                const hue = (1.0 - ratio) * 240;
                 return `hsla(${hue}, 85%, 52%, ${0.5 + ratio * 0.4})`;
             } else if (rampName === 'YlOrRd') {
                 if (ratio < 0.25) return `rgba(254, 240, 178, ${0.45 + ratio * 0.35})`;
@@ -776,39 +825,61 @@
             }
         }
 
-        // 6. Recalculation Engine
+        // 4. Real-Time Recalculation Engine
         let miniChart;
+        let guStats = {};
+        let dongStats = {};
 
         function recalculateAccessibility() {
             const t0 = performance.now();
 
+            const viewMode = document.getElementById('spatial-view-mode').value;
+            const aggMetric = document.getElementById('agg-metric').value;
             const decayMode = document.getElementById('decay-mode').value;
             const rBus = parseFloat(document.getElementById('r-bus').value);
             const rSubway = parseFloat(document.getElementById('r-subway').value);
-            const baseBus = parseFloat(document.getElementById('base-bus').value);
-            const baseSubway = parseFloat(document.getElementById('base-subway').value);
-            const mode = document.getElementById('scaling-mode').value;
-            const pWeight = parseFloat(document.getElementById('p-weight').value);
-            const maxAdd = parseFloat(document.getElementById('max-add').value);
             const scoreTarget = document.getElementById('score-target').value;
             const colorRamp = document.getElementById('color-ramp').value;
             const showBottom1 = document.getElementById('toggle-bottom1').checked;
 
             document.getElementById('val-r-bus').innerText = rBus + 'm';
             document.getElementById('val-r-subway').innerText = rSubway + 'm';
-            document.getElementById('val-base-bus').innerText = baseBus + '점';
-            document.getElementById('val-base-subway').innerText = baseSubway + '점';
-            document.getElementById('val-p-weight').innerText = pWeight.toFixed(1);
-            document.getElementById('val-max-add').innerText = maxAdd + '점';
 
-            const busFacScores = buses.map(b => calcFacilityScore(baseBus, b.passengers, mode, pWeight, maxAdd));
-            const subFacScores = subways.map(s => calcFacilityScore(baseSubway, s.passengers, mode, pWeight, maxAdd));
+            if (viewMode === 'grid') {
+                document.getElementById('stat-view-mode-label').innerText = '250m 격자 (10,125개)';
+                document.getElementById('group-agg-metric').style.display = 'none';
+                document.getElementById('sec-bottom1-title').style.display = 'flex';
+                document.getElementById('container-bottom1').style.display = 'flex';
+                document.getElementById('legend-vuln-row').style.display = showBottom1 ? 'flex' : 'none';
+                document.getElementById('legend-masked-row').style.display = 'flex';
+            } else if (viewMode === 'dong') {
+                document.getElementById('stat-view-mode-label').innerText = '행정동 단위 (427개 동)';
+                document.getElementById('group-agg-metric').style.display = 'flex';
+                document.getElementById('sec-bottom1-title').style.display = 'none';
+                document.getElementById('container-bottom1').style.display = 'none';
+                document.getElementById('legend-vuln-row').style.display = 'none';
+                document.getElementById('legend-masked-row').style.display = 'none';
+            } else {
+                document.getElementById('stat-view-mode-label').innerText = '자치구 단위 (25개 구)';
+                document.getElementById('group-agg-metric').style.display = 'flex';
+                document.getElementById('sec-bottom1-title').style.display = 'none';
+                document.getElementById('container-bottom1').style.display = 'none';
+                document.getElementById('legend-vuln-row').style.display = 'none';
+                document.getElementById('legend-masked-row').style.display = 'none';
+            }
 
-            let maxScore = 0.0;
+            // Facility scores based on ln(1 + passengers / median_passengers)
+            const busFacScores = buses.map(b => calcFacilityScore(b.passengers, medianBusPassengers));
+            const subFacScores = subways.map(s => calcFacilityScore(s.passengers, medianSubwayPassengers));
+
+            let maxGridScore = 0.0;
             const validNonZeroScores = [];
 
             const busBucketRange = Math.ceil(rBus / BUCKET_SIZE);
             const subBucketRange = Math.ceil(rSubway / BUCKET_SIZE);
+
+            guStats = {};
+            dongStats = {};
 
             grids.forEach((g, idx) => {
                 const gx = g.cx;
@@ -861,63 +932,194 @@
                 g.subScore = subScore;
                 g.busCount = busCount;
                 g.subCount = subCount;
-                g.totalScore = busScore + subScore;
+                g.rawMobility = busScore + subScore;
 
-                let targetVal = g.totalScore;
+                // Population-Adjusted Transit Mobility: Transit Mobility / ln(1 + living_population)
+                const popDenominator = (g.pop > 0) ? Math.log1p(g.pop) : 1.0;
+                g.popAdjustedMobility = (g.pop > 0 && !g.masked) ? (g.rawMobility / popDenominator) : 0.0;
+
+                let targetVal = g.popAdjustedMobility;
+                if (scoreTarget === 'raw_mobility') targetVal = g.rawMobility;
                 if (scoreTarget === 'bus') targetVal = g.busScore;
                 if (scoreTarget === 'subway') targetVal = g.subScore;
 
                 g.currentScore = targetVal;
 
                 if (!g.masked) {
-                    if (targetVal > maxScore) maxScore = targetVal;
+                    if (targetVal > maxGridScore) maxGridScore = targetVal;
                     if (targetVal > 0) {
                         validNonZeroScores.push(targetVal);
                     }
                 }
+
+                const guKey = g.gu;
+                const dongKey = g.gu + ' ' + g.dong;
+
+                if (guKey) {
+                    if (!guStats[guKey]) guStats[guKey] = { name: guKey, sumScore: 0, validGrids: 0, totalPop: 0, maxScore: 0, scores: [] };
+                    if (!g.masked) {
+                        guStats[guKey].sumScore += targetVal;
+                        guStats[guKey].validGrids += 1;
+                        guStats[guKey].totalPop += g.pop;
+                        guStats[guKey].scores.push(targetVal);
+                        if (targetVal > guStats[guKey].maxScore) guStats[guKey].maxScore = targetVal;
+                    }
+                }
+
+                if (dongKey) {
+                    if (!dongStats[dongKey]) dongStats[dongKey] = { name: g.dong, gu: g.gu, fullName: dongKey, sumScore: 0, validGrids: 0, totalPop: 0, maxScore: 0, scores: [] };
+                    if (!g.masked) {
+                        dongStats[dongKey].sumScore += targetVal;
+                        dongStats[dongKey].validGrids += 1;
+                        dongStats[dongKey].totalPop += g.pop;
+                        dongStats[dongKey].scores.push(targetVal);
+                        if (targetVal > dongStats[dongKey].maxScore) dongStats[dongKey].maxScore = targetVal;
+                    }
+                }
             });
 
-            // Bottom 1% Quantile Cutoff Calculation
+            const guList = Object.values(guStats);
+            guList.forEach(st => {
+                st.meanScore = st.validGrids > 0 ? (st.sumScore / st.validGrids) : 0;
+                st.metricVal = (aggMetric === 'sum') ? st.sumScore : ((aggMetric === 'max') ? st.maxScore : st.meanScore);
+            });
+            guList.sort((a, b) => b.metricVal - a.metricVal);
+            guList.forEach((st, rk) => { st.rank = rk + 1; });
+
+            const dongList = Object.values(dongStats);
+            dongList.forEach(st => {
+                st.meanScore = st.validGrids > 0 ? (st.sumScore / st.validGrids) : 0;
+                st.metricVal = (aggMetric === 'sum') ? st.sumScore : ((aggMetric === 'max') ? st.maxScore : st.meanScore);
+            });
+            dongList.sort((a, b) => b.metricVal - a.metricVal);
+            dongList.forEach((st, rk) => { st.rank = rk + 1; });
+
             validNonZeroScores.sort((a, b) => a - b);
             let cutoff1 = 0.0;
             if (validNonZeroScores.length > 0) {
                 const idx1 = Math.floor(validNonZeroScores.length * 0.01);
                 cutoff1 = validNonZeroScores[idx1] || validNonZeroScores[0];
             }
-            document.getElementById('stat-bottom1-cutoff').innerText = cutoff1.toFixed(1) + '점';
+            document.getElementById('stat-bottom1-cutoff').innerText = cutoff1.toFixed(3);
 
-            // Update Map Grid Colors and Styles
-            grids.forEach((g, idx) => {
-                g.isBottom1 = (!g.masked && g.currentScore > 0 && g.currentScore <= cutoff1);
-                const fillColor = getColor(g.currentScore, maxScore, colorRamp, g.masked);
+            guLayerGroup.clearLayers();
+            dongLayerGroup.clearLayers();
 
-                const isPinned = (pinnedGridIndex === idx);
-                let strokeColor = g.masked ? '#132c24' : '#1e293b';
-                let strokeW = g.masked ? 0.3 : 0.2;
+            let activeMaxVal = maxGridScore;
 
-                if (isPinned) {
-                    strokeColor = '#f59e0b'; // Gold for pinned grid
-                    strokeW = 3.0;
-                } else if (showBottom1 && g.isBottom1) {
-                    strokeColor = '#ec4899'; // Bright Magenta border for Bottom 1%
-                    strokeW = 1.6;
-                }
+            if (viewMode === 'grid') {
+                gridLayers.forEach((rect, idx) => {
+                    const g = grids[idx];
+                    g.isBottom1 = (!g.masked && g.currentScore > 0 && g.currentScore <= cutoff1);
+                    const fillColor = getColor(g.currentScore, maxGridScore, colorRamp, g.masked);
 
-                gridLayers[idx].setStyle({
-                    fillColor: fillColor,
-                    fillOpacity: g.masked ? 0.55 : (g.currentScore > 0 ? 0.8 : 0.15),
-                    color: strokeColor,
-                    weight: strokeW
+                    const isPinned = (pinnedGridIndex === idx);
+                    let strokeColor = g.masked ? '#132c24' : '#1e293b';
+                    let strokeW = g.masked ? 0.3 : 0.2;
+
+                    if (isPinned) {
+                        strokeColor = '#f59e0b';
+                        strokeW = 3.0;
+                    } else if (showBottom1 && g.isBottom1) {
+                        strokeColor = '#ec4899';
+                        strokeW = 1.6;
+                    }
+
+                    rect.setStyle({
+                        fillColor: fillColor,
+                        fillOpacity: g.masked ? 0.55 : (g.currentScore > 0 ? 0.8 : 0.15),
+                        color: strokeColor,
+                        weight: strokeW
+                    });
                 });
-            });
+            } else if (viewMode === 'dong') {
+                gridLayers.forEach(rect => rect.setStyle({ fillOpacity: 0, weight: 0 }));
+                activeMaxVal = dongList.length > 0 ? dongList[0].metricVal : 1;
+
+                if (rawData.dong_geojson) {
+                    L.geoJSON(rawData.dong_geojson, {
+                        style: function(feature) {
+                            const dName = feature.properties.gu_dong;
+                            const st = dongStats[dName];
+                            const val = st ? st.metricVal : 0;
+                            return {
+                                fillColor: getColor(val, activeMaxVal, colorRamp, false),
+                                fillOpacity: 0.75,
+                                color: '#1e293b',
+                                weight: 0.8
+                            };
+                        },
+                        onEachFeature: function(feature, layer) {
+                            layer.on('mouseover', function() {
+                                this.setStyle({ weight: 2.5, color: '#38bdf8' });
+                                if (!pinnedRegionKey) {
+                                    showRegionInfo('dong', feature.properties.gu_dong);
+                                }
+                            });
+                            layer.on('mouseout', function() {
+                                if (pinnedRegionKey !== feature.properties.gu_dong) {
+                                    this.setStyle({ weight: 0.8, color: '#1e293b' });
+                                }
+                            });
+                            layer.on('click', function(e) {
+                                L.DomEvent.stopPropagation(e);
+                                pinnedRegionKey = feature.properties.gu_dong;
+                                document.getElementById('info-panel').classList.add('pinned');
+                                document.getElementById('pin-indicator').style.display = 'inline-block';
+                                toggleInfoPanel(true);
+                                showRegionInfo('dong', feature.properties.gu_dong, true);
+                            });
+                        }
+                    }).addTo(dongLayerGroup);
+                }
+            } else if (viewMode === 'gu') {
+                gridLayers.forEach(rect => rect.setStyle({ fillOpacity: 0, weight: 0 }));
+                activeMaxVal = guList.length > 0 ? guList[0].metricVal : 1;
+
+                if (rawData.gu_geojson) {
+                    L.geoJSON(rawData.gu_geojson, {
+                        style: function(feature) {
+                            const gName = feature.properties.gu_name;
+                            const st = guStats[gName];
+                            const val = st ? st.metricVal : 0;
+                            return {
+                                fillColor: getColor(val, activeMaxVal, colorRamp, false),
+                                fillOpacity: 0.75,
+                                color: '#f8fafc',
+                                weight: 1.5
+                            };
+                        },
+                        onEachFeature: function(feature, layer) {
+                            layer.on('mouseover', function() {
+                                this.setStyle({ weight: 3.5, color: '#38bdf8' });
+                                if (!pinnedRegionKey) {
+                                    showRegionInfo('gu', feature.properties.gu_name);
+                                }
+                            });
+                            layer.on('mouseout', function() {
+                                if (pinnedRegionKey !== feature.properties.gu_name) {
+                                    this.setStyle({ weight: 1.5, color: '#f8fafc' });
+                                }
+                            });
+                            layer.on('click', function(e) {
+                                L.DomEvent.stopPropagation(e);
+                                pinnedRegionKey = feature.properties.gu_name;
+                                document.getElementById('info-panel').classList.add('pinned');
+                                document.getElementById('pin-indicator').style.display = 'inline-block';
+                                toggleInfoPanel(true);
+                                showRegionInfo('gu', feature.properties.gu_name, true);
+                            });
+                        }
+                    }).addTo(guLayerGroup);
+                }
+            }
 
             const t1 = performance.now();
 
             document.getElementById('stat-calc-time').innerText = Math.round(t1 - t0) + ' ms';
-            document.getElementById('stat-max-score').innerText = maxScore.toFixed(1);
-            document.getElementById('legend-max').innerText = maxScore.toFixed(1) + '점';
+            document.getElementById('stat-max-score').innerText = activeMaxVal.toFixed(3);
+            document.getElementById('legend-max').innerText = activeMaxVal.toFixed(3);
 
-            // Update Legend Gradient Display
             const legGrad = document.getElementById('legend-gradient');
             if (colorRamp === 'BlueRed') {
                 legGrad.style.background = 'linear-gradient(to right, #3b82f6, #06b6d4, #10b981, #eab308, #ef4444)';
@@ -929,31 +1131,146 @@
                 legGrad.style.background = 'linear-gradient(to right, #1e293b, #0d0887, #cc4678, #f0f921)';
             }
 
-            document.getElementById('legend-vuln-row').style.display = showBottom1 ? 'flex' : 'none';
-
-            // Refresh pinned grid display if pinned
-            if (pinnedGridIndex >= 0) {
+            if (viewMode === 'grid' && pinnedGridIndex >= 0) {
                 showGridInfo(grids[pinnedGridIndex], true);
+            } else if (pinnedRegionKey) {
+                showRegionInfo(viewMode, pinnedRegionKey, true);
             }
 
             updateMiniChart(rBus, rSubway, decayMode);
         }
 
+        // Detailed Breakdown Box according to USER's EXACT FORMULAS
         function showGridInfo(g, isPinned) {
             const container = document.getElementById('info-content');
             const maskHtml = g.masked ? `<div class="mask-badge">⛰️ 산지/하천/공원/미집계 마스킹 영역</div>` : ``;
-            const vulnHtml = (!g.masked && g.isBottom1) ? `<div class="vuln-badge">⚠️ 점수 하위 1% 대중교통 접근성 취약 격자</div>` : ``;
+            const vulnHtml = (!g.masked && g.isBottom1) ? `<div class="vuln-badge">⚠️ 지표 하위 1% 접근성 취약 격자</div>` : ``;
             
+            const decayMode = document.getElementById('decay-mode').value;
+            const rBus = parseFloat(document.getElementById('r-bus').value);
+            const rSubway = parseFloat(document.getElementById('r-subway').value);
+
+            const gx = g.cx, gy = g.cy;
+            let sumBusDecayW = 0, sumBusFacScores = 0, busFacCount = 0;
+            let sumSubDecayW = 0, sumSubFacScores = 0, subFacCount = 0;
+
+            buses.forEach(b => {
+                const dist = Math.hypot(gx - b.x, gy - b.y);
+                if (dist <= rBus) {
+                    const w = calculateDecayWeight(dist, rBus, decayMode);
+                    const facScore = calcFacilityScore(b.passengers, medianBusPassengers);
+                    sumBusDecayW += w;
+                    sumBusFacScores += facScore;
+                    busFacCount++;
+                }
+            });
+
+            subways.forEach(s => {
+                const dist = Math.hypot(gx - s.x, gy - s.y);
+                if (dist <= rSubway) {
+                    const w = calculateDecayWeight(dist, rSubway, decayMode);
+                    const facScore = calcFacilityScore(s.passengers, medianSubwayPassengers);
+                    sumSubDecayW += w;
+                    sumSubFacScores += facScore;
+                    subFacCount++;
+                }
+            });
+
+            const avgBusFac = busFacCount > 0 ? (sumBusFacScores / busFacCount) : 0;
+            const avgSubFac = subFacCount > 0 ? (sumSubFacScores / subFacCount) : 0;
+            const lnPop = (g.pop > 0) ? Math.log1p(g.pop) : 1.0;
+
             container.innerHTML = `
                 ${maskHtml}
                 ${vulnHtml}
                 <div class="info-row"><label>격자 코드:</label> <span>${g.code}</span></div>
                 <div class="info-row"><label>행정구역:</label> <span>${g.address || (g.gu + ' ' + g.dong)}</span></div>
-                <div class="info-row"><label>평균 생활인구:</label> <span>${g.masked ? '미집계 (0명)' : g.pop.toLocaleString() + ' 명'}</span></div>
-                <hr style="border-color: var(--border-color); margin: 8px 0;">
-                <div class="info-row"><label>종합 접근성 점수:</label> <span style="color:#f59e0b; font-size:1.05rem;">${(g.totalScore || 0).toFixed(1)} 점</span></div>
-                <div class="info-row"><label>🚌 버스 접근성 점수:</label> <span style="color:#60a5fa;">${(g.busScore || 0).toFixed(1)} 점 (${g.busCount || 0}개)</span></div>
-                <div class="info-row"><label>🚇 지하철 접근성 점수:</label> <span style="color:#c084fc;">${(g.subScore || 0).toFixed(1)} 점 (${g.subCount || 0}개)</span></div>
+                <div class="info-row"><label>평균 생활인구:</label> <span>${g.masked ? '미집계 (0명)' : g.pop.toLocaleString() + ' 명 (ln = ' + lnPop.toFixed(2) + ')'}</span></div>
+                <hr style="border-color: var(--border-color); margin: 6px 0;">
+                <div class="info-row"><label>👥 인구를 고려한 교통이동성:</label> <span style="color:#f59e0b; font-size:1.1rem; font-weight:800;">${(g.popAdjustedMobility || 0).toFixed(3)}</span></div>
+                <div class="info-row"><label>🚌🚇 순수 교통이동성 (∑ W·S):</label> <span style="color:#38bdf8; font-weight:700;">${(g.rawMobility || 0).toFixed(3)}</span></div>
+
+                <!-- FORMULA BREAKDOWN BOX -->
+                <div class="breakdown-box">
+                    <h4>🔍 사용자 지정 수식 분해 (Model Breakdown)</h4>
+
+                    <div class="breakdown-item">
+                        <div class="title">
+                            <span>1️⃣ 버스 시설점수 & 이동성 (${busFacCount}개)</span>
+                            <span class="highlight">${(g.busScore || 0).toFixed(3)}</span>
+                        </div>
+                        <div class="formula">
+                            • 시설점수 S_i = ln(1 + 승하차인원 / ${medianBusPassengers.toLocaleString()})<br>
+                            • 정류장 평균 시설점수: <span style="color:#60a5fa;">${avgBusFac.toFixed(3)}</span><br>
+                            • 거리감쇠계수 합계 (∑W): ${sumBusDecayW.toFixed(2)}<br>
+                            • 버스 교통이동성 = ∑(W_i × S_i) = <span class="highlight">${(g.busScore || 0).toFixed(3)}</span>
+                        </div>
+                    </div>
+
+                    <div class="breakdown-item subway">
+                        <div class="title">
+                            <span>2️⃣ 지하철 시설점수 & 이동성 (${subFacCount}개)</span>
+                            <span class="highlight">${(g.subScore || 0).toFixed(3)}</span>
+                        </div>
+                        <div class="formula">
+                            • 시설점수 S_i = ln(1 + 승하차인원 / ${medianSubwayPassengers.toLocaleString()})<br>
+                            • 지하철역 평균 시설점수: <span style="color:#c084fc;">${avgSubFac.toFixed(3)}</span><br>
+                            • 거리감쇠계수 합계 (∑W): ${sumSubDecayW.toFixed(2)}<br>
+                            • 지하철 교통이동성 = ∑(W_i × S_i) = <span class="highlight">${(g.subScore || 0).toFixed(3)}</span>
+                        </div>
+                    </div>
+
+                    <div class="breakdown-item pop">
+                        <div class="title">
+                            <span>3️⃣ 인구를 고려한 최종 교통이동성</span>
+                            <span class="highlight" style="color:#f59e0b;">${(g.popAdjustedMobility || 0).toFixed(3)}</span>
+                        </div>
+                        <div class="formula">
+                            • 순수 교통이동성 = 버스(${g.busScore.toFixed(2)}) + 지하철(${g.subScore.toFixed(2)}) = <b>${g.rawMobility.toFixed(3)}</b><br>
+                            • 분모 = ln(1 + 생활인구 ${g.pop.toLocaleString()}명) = <b>${lnPop.toFixed(3)}</b><br>
+                            • 최종 산식 = <span style="color:#f59e0b; font-weight:700;">${g.rawMobility.toFixed(3)} / ${lnPop.toFixed(3)} = ${(g.popAdjustedMobility || 0).toFixed(3)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showRegionInfo(type, key, isPinned) {
+            const container = document.getElementById('info-content');
+            let st = (type === 'gu') ? guStats[key] : dongStats[key];
+
+            if (!st) {
+                container.innerHTML = `<p style="color: var(--text-muted);">정보를 불러올 수 없습니다.</p>`;
+                return;
+            }
+
+            const title = (type === 'gu') ? `🏛️ 자치구: ${st.name}` : `🏙️ 행정동: ${st.fullName}`;
+            const totalCount = (type === 'gu') ? 25 : 427;
+            const aggMetric = document.getElementById('agg-metric').value;
+            const aggLabel = (aggMetric === 'sum') ? '총 합산 수치' : ((aggMetric === 'max') ? '최대 수치' : '평균 수치');
+
+            container.innerHTML = `
+                <div class="rank-badge">🏆 서울시 ${type === 'gu' ? '자치구' : '행정동'} 순위: ${st.rank}위 / ${totalCount}개</div>
+                <div class="info-row" style="font-size:1.0rem; font-weight:700; color:#38bdf8; margin: 4px 0;"><label>행정구역명:</label> <span>${st.fullName || st.name}</span></div>
+                <div class="info-row"><label>유효 분석 격자 수:</label> <span>${st.validGrids.toLocaleString()} 개</span></div>
+                <div class="info-row"><label>총 생활인구 합계:</label> <span>${st.totalPop.toLocaleString()} 명</span></div>
+                <hr style="border-color: var(--border-color); margin: 6px 0;">
+                <div class="info-row"><label>📊 선택 지표 (${aggLabel}):</label> <span style="color:#f59e0b; font-size:1.08rem; font-weight:800;">${st.metricVal.toFixed(3)}</span></div>
+                
+                <div class="breakdown-box">
+                    <h4>🔍 행정구역 집계 세부 분해</h4>
+                    <div class="breakdown-item">
+                        <div class="title">
+                            <span>구역 내 지표 분포</span>
+                            <span class="highlight">평균 ${st.meanScore.toFixed(3)}</span>
+                        </div>
+                        <div class="formula">
+                            • 평균 수치 = 총합(${st.sumScore.toFixed(2)}) / 격자수(${st.validGrids}개) = <b style="color:#60a5fa;">${st.meanScore.toFixed(3)}</b><br>
+                            • 구역 내 최고 격자 수치: <b style="color:#10b981;">${st.maxScore.toFixed(3)}</b><br>
+                            • 구역 총 생활인구: ${st.totalPop.toLocaleString()} 명
+                        </div>
+                    </div>
+                </div>
             `;
         }
 
@@ -997,7 +1314,7 @@
                 }
             });
 
-            const inputs = ['r-bus', 'r-subway', 'base-bus', 'base-subway', 'scaling-mode', 'p-weight', 'max-add', 'score-target', 'color-ramp', 'decay-mode', 'toggle-bottom1'];
+            const inputs = ['spatial-view-mode', 'agg-metric', 'r-bus', 'r-subway', 'score-target', 'color-ramp', 'decay-mode', 'toggle-bottom1'];
             inputs.forEach(id => {
                 const elem = document.getElementById(id);
                 if (elem) {

@@ -112,16 +112,31 @@ def prepare_and_export_interactive_data():
         
     print(f"[ExportData] Processed {len(subway_list)} subway stations.")
     
-    # 5. GeoJSON for Gu Boundaries
-    gu_geojson = json.loads(gu_wgs84.to_json())
+    # 5. Gu GeoJSON & Dong GeoJSON Export
+    print("[ExportData] Processing Gu & Dong GeoJSON boundaries...")
+    grid_wgs = grid_gdf.to_crs(epsg=4326)
     
-    # Export as JS object window.ACCESSIBILITY_DATA
+    # Gu Boundaries (25 Districts)
+    gu_gdf = grid_wgs.dissolve(by='gu_name', as_index=False)[['gu_name', 'geometry']]
+    gu_gdf['geometry'] = gu_gdf['geometry'].simplify(0.0001)
+    gu_geojson_str = gu_gdf.to_json()
+    gu_geojson = json.loads(gu_geojson_str)
+    
+    # Dong Boundaries (425+ Administrative Dongs)
+    grid_wgs['gu_dong'] = grid_wgs['gu_name'] + ' ' + grid_wgs['dong_name']
+    dong_gdf = grid_wgs.dissolve(by='gu_dong', as_index=False)[['gu_name', 'dong_name', 'gu_dong', 'geometry']]
+    dong_gdf['geometry'] = dong_gdf['geometry'].simplify(0.0001)
+    dong_geojson_str = dong_gdf.to_json()
+    dong_geojson = json.loads(dong_geojson_str)
+
+    # Payload Assembly
     out_js = os.path.join(MAPS_DIR, "grid_data.js")
     data_payload = {
         "grids": grid_list,
         "buses": bus_list,
         "subways": subway_list,
-        "gu_geojson": gu_geojson
+        "gu_geojson": gu_geojson,
+        "dong_geojson": dong_geojson
     }
     
     with open(out_js, "w", encoding="utf-8") as f:
