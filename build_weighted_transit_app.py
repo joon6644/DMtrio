@@ -7,9 +7,10 @@ from src.export_interactive_data import prepare_and_export_interactive_data
 
 def generate_weighted_transit_html():
     """
-    Generates a dedicated web application for the Mode-Weighted Transit Mobility Model:
-    Weighted Mobility = 0.544 * BusMobility + 0.456 * SubwayMobility
-    where Facility Score = ln(1 + Passengers / Facility Median Passengers)
+    Generates a dedicated web application for the Mode-Weighted Transit Mobility Model
+    with Scale Normalization (0~1) to eliminate scale imbalance (Bus ~16.56 vs Subway ~3.78):
+    
+    Normalized Mobility = w_bus * (BusScore / MaxBus) + w_subway * (SubwayScore / MaxSubway)
     """
     js_data_path = os.path.join(MAPS_DIR, "grid_data.js")
     if not os.path.exists(js_data_path):
@@ -22,7 +23,7 @@ def generate_weighted_transit_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>서울시 0.544 버스 + 0.456 지하철 가중 대중교통 접근성 지도</title>
+    <title>서울시 0.544 버스 + 0.456 지하철 정규화 가중 대중교통 접근성 지도</title>
     
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -74,7 +75,7 @@ def generate_weighted_transit_html():
         }
 
         header h1 {
-            font-size: 1.2rem;
+            font-size: 1.18rem;
             font-weight: 700;
             background: linear-gradient(90deg, #38bdf8, #a855f7);
             -webkit-background-clip: text;
@@ -108,7 +109,7 @@ def generate_weighted_transit_html():
 
         /* Sidebar Controls */
         .sidebar {
-            width: 415px;
+            width: 420px;
             background: var(--panel-bg);
             backdrop-filter: blur(12px);
             border-right: 1px solid var(--border-color);
@@ -214,9 +215,9 @@ def generate_weighted_transit_html():
             border: 1.5px solid var(--border-color);
             border-radius: 12px;
             padding: 14px 16px;
-            width: 380px;
+            width: 385px;
             max-height: calc(100vh - 120px);
-            overflow-y.auto;
+            overflow-y: auto;
             z-index: 999;
             box-shadow: 0 10px 30px rgba(0,0,0,0.6);
             font-size: 0.86rem;
@@ -460,7 +461,7 @@ def generate_weighted_transit_html():
 <body>
 
     <header>
-        <h1>🚌🚇 서울시 0.544 버스 + 0.456 지하철 가중 대중교통 접근성 지도</h1>
+        <h1>🚌🚇 서울시 0.544 버스 + 0.456 지하철 정규화 가중 접근성 지도</h1>
         <div class="header-stats">
             <div class="stat-item">표시 단위: <span class="val" style="color:#60a5fa;" id="stat-view-mode-label">250m 격자</span></div>
             <div class="stat-item">계산 시간: <span class="val" id="stat-calc-time">0 ms</span></div>
@@ -500,11 +501,12 @@ def generate_weighted_transit_html():
                 <span>🎯 시각화 분석 지표 선택</span>
             </div>
             <div class="control-group">
-                <select id="score-target" style="background:#0f172a; border-color:#f59e0b; font-weight:700; color:#f59e0b;">
-                    <option value="pop_adjusted_weighted" selected>👥 인구 고려 가중 교통이동성 [ (0.544버스 + 0.456지하철) / ln(생활인구) ]</option>
-                    <option value="raw_weighted">🚌🚇 순수 가중 교통이동성 [ 0.544버스 + 0.456지하철 ]</option>
-                    <option value="bus">🚌 버스 교통이동성 (단독)</option>
-                    <option value="subway">🚇 지하철 교통이동성 (단독)</option>
+                <select id="score-target" style="background:#0f172a; border-color:#38bdf8; font-weight:700; color:#38bdf8;">
+                    <option value="norm_weighted" selected>✨ [추천] 정규화 반영 가중 교통이동성 [ 0.544×(Bus/Max) + 0.456×(Sub/Max) ]</option>
+                    <option value="pop_adjusted_norm">👥 인구 고려 정규화 가중 교통이동성 [ 정규화가중 / ln(생활인구) ]</option>
+                    <option value="raw_weighted">⚠️ [원시] 단순 원본 가중합 (미정규화 - 버스 89.1% 지배)</option>
+                    <option value="norm_bus">🚌 버스 이동성 (단독 정규화 0~1)</option>
+                    <option value="norm_subway">🚇 지하철 이동성 (단독 정규화 0~1)</option>
                 </select>
             </div>
 
@@ -587,7 +589,7 @@ def generate_weighted_transit_html():
                 <button class="close-btn" onclick="toggleInfoPanel(false)" title="닫기">✕</button>
             </div>
             <div id="info-content">
-                <p style="color: var(--text-muted);">지도의 격자나 행정구역을 클릭하면 0.544 버스 + 0.456 지하철 가중 수식이 분해되어 출력됩니다.</p>
+                <p style="color: var(--text-muted);">지도의 격자나 행정구역을 클릭하면 스케일 정규화가 적용된 가중 수식 분해가 출력됩니다.</p>
             </div>
         </div>
 
@@ -620,10 +622,6 @@ def generate_weighted_transit_html():
         const buses = rawData.buses;
         const subways = rawData.subways;
 
-        const maskedCount = grids.filter(g => g.masked).length;
-        const validCount = grids.length - maskedCount;
-
-        // Compute City-wide Median Passengers for Buses & Subways (Denominators)
         const busPassengers = buses.map(b => b.passengers).sort((a, b) => a - b);
         const subwayPassengers = subways.map(s => s.passengers).sort((a, b) => a - b);
         const medianBusPassengers = busPassengers[Math.floor(busPassengers.length / 2)] || 1;
@@ -825,7 +823,6 @@ def generate_weighted_transit_html():
             }
         }
 
-        // Facility Score with Median Denominators: ln(1 + passengers / median_passengers)
         function calcFacilityScore(passCount, medianPass) {
             return Math.log1p(passCount / (medianPass || 1));
         }
@@ -856,10 +853,11 @@ def generate_weighted_transit_html():
             }
         }
 
-        // 4. Real-Time Recalculation Engine
         let miniChart;
         let guStats = {};
         let dongStats = {};
+        let currentMaxBusScore = 1.0;
+        let currentMaxSubwayScore = 1.0;
 
         function updateWeightLabels() {
             const wBus = parseFloat(document.getElementById('w-bus').value);
@@ -915,78 +913,79 @@ def generate_weighted_transit_html():
             const busFacScores = buses.map(b => calcFacilityScore(b.passengers, medianBusPassengers));
             const subFacScores = subways.map(s => calcFacilityScore(s.passengers, medianSubwayPassengers));
 
-            let maxGridScore = 0.0;
-            const validNonZeroScores = [];
-
             const busBucketRange = Math.ceil(rBus / BUCKET_SIZE);
             const subBucketRange = Math.ceil(rSubway / BUCKET_SIZE);
 
-            guStats = {};
-            dongStats = {};
+            // Pass 1: Compute raw busScore and subScore to determine city-wide MAX for normalization
+            let maxBus = 0.001;
+            let maxSub = 0.001;
 
-            grids.forEach((g, idx) => {
-                const gx = g.cx;
-                const gy = g.cy;
+            grids.forEach((g) => {
+                const gx = g.cx, gy = g.cy;
+                const gbx = Math.floor(gx / BUCKET_SIZE), gby = Math.floor(gy / BUCKET_SIZE);
 
-                const gbx = Math.floor(gx / BUCKET_SIZE);
-                const gby = Math.floor(gy / BUCKET_SIZE);
-
-                let busScore = 0.0;
-                let busCount = 0;
+                let busScore = 0.0, subScore = 0.0;
 
                 for (let dx = -busBucketRange; dx <= busBucketRange; dx++) {
                     for (let dy = -busBucketRange; dy <= busBucketRange; dy++) {
-                        const key = (gbx + dx) + '_' + (gby + dy);
-                        const bList = busBuckets[key];
+                        const bList = busBuckets[(gbx + dx) + '_' + (gby + dy)];
                         if (bList) {
                             for (let i = 0; i < bList.length; i++) {
                                 const b = bList[i];
                                 const dist = Math.hypot(gx - b.x, gy - b.y);
-                                if (dist <= rBus) {
-                                    busCount++;
-                                    busScore += calculateDecayWeight(dist, rBus, decayMode) * busFacScores[b.id];
-                                }
+                                if (dist <= rBus) busScore += calculateDecayWeight(dist, rBus, decayMode) * busFacScores[b.id];
                             }
                         }
                     }
                 }
 
-                let subScore = 0.0;
-                let subCount = 0;
-
                 for (let dx = -subBucketRange; dx <= subBucketRange; dx++) {
                     for (let dy = -subBucketRange; dy <= subBucketRange; dy++) {
-                        const key = (gbx + dx) + '_' + (gby + dy);
-                        const sList = subwayBuckets[key];
+                        const sList = subwayBuckets[(gbx + dx) + '_' + (gby + dy)];
                         if (sList) {
                             for (let i = 0; i < sList.length; i++) {
                                 const s = sList[i];
                                 const dist = Math.hypot(gx - s.x, gy - s.y);
-                                if (dist <= rSubway) {
-                                    subCount++;
-                                    subScore += calculateDecayWeight(dist, rSubway, decayMode) * subFacScores[s.id];
-                                }
+                                if (dist <= rSubway) subScore += calculateDecayWeight(dist, rSubway, decayMode) * subFacScores[s.id];
                             }
                         }
                     }
                 }
 
-                g.busScore = busScore;
-                g.subScore = subScore;
-                g.busCount = busCount;
-                g.subCount = subCount;
+                g.rawBusScore = busScore;
+                g.rawSubScore = subScore;
 
-                // Weighted Mobility Model: 0.544 * Bus + 0.456 * Subway
-                g.weightedMobility = wBus * busScore + wSubway * subScore;
+                if (!g.masked) {
+                    if (busScore > maxBus) maxBus = busScore;
+                    if (subScore > maxSub) maxSub = subScore;
+                }
+            });
 
-                // Population-Adjusted Weighted Mobility
-                const popDenominator = (g.pop > 0) ? Math.log1p(g.pop) : 1.0;
-                g.popAdjustedWeightedMobility = (g.pop > 0 && !g.masked) ? (g.weightedMobility / popDenominator) : 0.0;
+            currentMaxBusScore = maxBus;
+            currentMaxSubwayScore = maxSub;
 
-                let targetVal = g.popAdjustedWeightedMobility;
-                if (scoreTarget === 'raw_weighted') targetVal = g.weightedMobility;
-                if (scoreTarget === 'bus') targetVal = g.busScore;
-                if (scoreTarget === 'subway') targetVal = g.subScore;
+            let maxGridScore = 0.0;
+            const validNonZeroScores = [];
+
+            guStats = {};
+            dongStats = {};
+
+            // Pass pass 2: Compute normalized scores and target metrics
+            grids.forEach((g) => {
+                g.normBusScore = g.masked ? 0.0 : (g.rawBusScore / maxBus);
+                g.normSubScore = g.masked ? 0.0 : (g.rawSubScore / maxSub);
+
+                g.rawWeightedMobility = wBus * g.rawBusScore + wSubway * g.rawSubScore;
+                g.normWeightedMobility = wBus * g.normBusScore + wSubway * g.normSubScore;
+
+                const lnPop = (g.pop > 0) ? Math.log1p(g.pop) : 1.0;
+                g.popAdjustedNormMobility = (g.pop > 0 && !g.masked) ? (g.normWeightedMobility / lnPop) : 0.0;
+
+                let targetVal = g.normWeightedMobility;
+                if (scoreTarget === 'pop_adjusted_norm') targetVal = g.popAdjustedNormMobility;
+                if (scoreTarget === 'raw_weighted') targetVal = g.rawWeightedMobility;
+                if (scoreTarget === 'norm_bus') targetVal = g.normBusScore;
+                if (scoreTarget === 'norm_subway') targetVal = g.normSubScore;
 
                 g.currentScore = targetVal;
 
@@ -1185,50 +1184,23 @@ def generate_weighted_transit_html():
             updateMiniChart(rBus, rSubway, decayMode);
         }
 
-        // Detailed Formula Breakdown Panel
+        // Detailed Formula Breakdown Panel (Showing Raw -> Max Normalization -> Weighted Superposition)
         function showGridInfo(g, isPinned) {
             const container = document.getElementById('info-content');
             const maskHtml = g.masked ? `<div class="mask-badge">⛰️ 산지/하천/공원/미집계 마스킹 영역</div>` : ``;
             const vulnHtml = (!g.masked && g.isBottom1) ? `<div class="vuln-badge">⚠️ 지표 하위 1% 접근성 취약 격자</div>` : ``;
             
-            const decayMode = document.getElementById('decay-mode').value;
-            const rBus = parseFloat(document.getElementById('r-bus').value);
-            const rSubway = parseFloat(document.getElementById('r-subway').value);
             const wBus = parseFloat(document.getElementById('w-bus').value);
             const wSubway = 1.0 - wBus;
 
-            const gx = g.cx, gy = g.cy;
-            let sumBusDecayW = 0, sumBusFacScores = 0, busFacCount = 0;
-            let sumSubDecayW = 0, sumSubFacScores = 0, subFacCount = 0;
-
-            buses.forEach(b => {
-                const dist = Math.hypot(gx - b.x, gy - b.y);
-                if (dist <= rBus) {
-                    const w = calculateDecayWeight(dist, rBus, decayMode);
-                    const facScore = calcFacilityScore(b.passengers, medianBusPassengers);
-                    sumBusDecayW += w;
-                    sumBusFacScores += facScore;
-                    busFacCount++;
-                }
-            });
-
-            subways.forEach(s => {
-                const dist = Math.hypot(gx - s.x, gy - s.y);
-                if (dist <= rSubway) {
-                    const w = calculateDecayWeight(dist, rSubway, decayMode);
-                    const facScore = calcFacilityScore(s.passengers, medianSubwayPassengers);
-                    sumSubDecayW += w;
-                    sumSubFacScores += facScore;
-                    subFacCount++;
-                }
-            });
-
-            const avgBusFac = busFacCount > 0 ? (sumBusFacScores / busFacCount) : 0;
-            const avgSubFac = subFacCount > 0 ? (sumSubFacScores / subFacCount) : 0;
             const lnPop = (g.pop > 0) ? Math.log1p(g.pop) : 1.0;
 
-            const weightedBusContribution = wBus * g.busScore;
-            const weightedSubContribution = wSubway * g.subScore;
+            const busContrib = wBus * g.normBusScore;
+            const subContrib = wSubway * g.normSubScore;
+            const totalWeighted = busContrib + subContrib;
+
+            const busRatioPercent = totalWeighted > 0 ? ((busContrib / totalWeighted) * 100).toFixed(1) : "0.0";
+            const subRatioPercent = totalWeighted > 0 ? ((subContrib / totalWeighted) * 100).toFixed(1) : "0.0";
 
             container.innerHTML = `
                 ${maskHtml}
@@ -1237,46 +1209,47 @@ def generate_weighted_transit_html():
                 <div class="info-row"><label>행정구역:</label> <span>${g.address || (g.gu + ' ' + g.dong)}</span></div>
                 <div class="info-row"><label>평균 생활인구:</label> <span>${g.masked ? '미집계 (0명)' : g.pop.toLocaleString() + ' 명 (ln = ' + lnPop.toFixed(2) + ')'}</span></div>
                 <hr style="border-color: var(--border-color); margin: 6px 0;">
-                <div class="info-row"><label>👥 인구 고려 가중 교통이동성:</label> <span style="color:#f59e0b; font-size:1.1rem; font-weight:800;">${(g.popAdjustedWeightedMobility || 0).toFixed(3)}</span></div>
-                <div class="info-row"><label>🚌🚇 순수 가중 교통이동성:</label> <span style="color:#38bdf8; font-weight:700;">${(g.weightedMobility || 0).toFixed(3)}</span></div>
+                <div class="info-row"><label>✨ [정규화] 가중 교통이동성:</label> <span style="color:#38bdf8; font-size:1.1rem; font-weight:800;">${(g.normWeightedMobility || 0).toFixed(3)}</span></div>
+                <div class="info-row"><label>👥 인구 고려 정규화 가중점수:</label> <span style="color:#f59e0b; font-weight:700;">${(g.popAdjustedNormMobility || 0).toFixed(3)}</span></div>
+                <div class="info-row"><label>📊 실질 기여 비중 (Bus vs Sub):</label> <span style="color:#a855f7; font-weight:700;">버스 ${busRatioPercent}% : 지하철 ${subRatioPercent}%</span></div>
 
                 <!-- FORMULA BREAKDOWN BOX -->
                 <div class="breakdown-box">
-                    <h4>🔍 ${wBus.toFixed(3)} 버스 + ${wSubway.toFixed(3)} 지하철 수식 분해</h4>
+                    <h4>🔍 정규화 스케일 보정 수식 분해 (Normalized Breakdown)</h4>
 
                     <div class="breakdown-item">
                         <div class="title">
-                            <span>1️⃣ 버스 이동성 (가중치 ${wBus.toFixed(3)})</span>
-                            <span class="highlight">${weightedBusContribution.toFixed(3)}</span>
+                            <span>1️⃣ 버스 정규화 (Max=${currentMaxBusScore.toFixed(2)})</span>
+                            <span class="highlight">${busContrib.toFixed(3)}</span>
                         </div>
                         <div class="formula">
-                            • 분모(중앙값): ${medianBusPassengers.toLocaleString()}명 (${busFacCount}개 정류장)<br>
-                            • 버스 순수 이동성 ∑(W_i × S_i) = ${g.busScore.toFixed(3)}<br>
-                            • 가중 기여도 = <b>${wBus.toFixed(3)} × ${g.busScore.toFixed(3)} = <span class="highlight">${weightedBusContribution.toFixed(3)}</span></b>
+                            • 원본 버스점수 S_bus = ${g.rawBusScore.toFixed(3)}<br>
+                            • 정규화 점수 NormS = ${g.rawBusScore.toFixed(3)} / ${currentMaxBusScore.toFixed(2)} = <b>${g.normBusScore.toFixed(3)}</b><br>
+                            • 버스 기여액 = ${wBus.toFixed(3)} × ${g.normBusScore.toFixed(3)} = <span class="highlight">${busContrib.toFixed(3)}</span>
                         </div>
                     </div>
 
                     <div class="breakdown-item subway">
                         <div class="title">
-                            <span>2️⃣ 지하철 이동성 (가중치 ${wSubway.toFixed(3)})</span>
-                            <span class="highlight">${weightedSubContribution.toFixed(3)}</span>
+                            <span>2️⃣ 지하철 정규화 (Max=${currentMaxSubwayScore.toFixed(2)})</span>
+                            <span class="highlight">${subContrib.toFixed(3)}</span>
                         </div>
                         <div class="formula">
-                            • 분모(중앙값): ${medianSubwayPassengers.toLocaleString()}명 (${subFacCount}개 역)<br>
-                            • 지하철 순수 이동성 ∑(W_j × S_j) = ${g.subScore.toFixed(3)}<br>
-                            • 가중 기여도 = <b>${wSubway.toFixed(3)} × ${g.subScore.toFixed(3)} = <span class="highlight">${weightedSubContribution.toFixed(3)}</span></b>
+                            • 원본 지하철점수 S_sub = ${g.rawSubScore.toFixed(3)}<br>
+                            • 정규화 점수 NormS = ${g.rawSubScore.toFixed(3)} / ${currentMaxSubwayScore.toFixed(2)} = <b>${g.normSubScore.toFixed(3)}</b><br>
+                            • 지하철 기여액 = ${wSubway.toFixed(3)} × ${g.normSubScore.toFixed(3)} = <span class="highlight">${subContrib.toFixed(3)}</span>
                         </div>
                     </div>
 
                     <div class="breakdown-item weight">
                         <div class="title">
-                            <span>3️⃣ 총 가중 결합 및 인구 반영</span>
-                            <span class="highlight" style="color:#f59e0b;">${(g.popAdjustedWeightedMobility || 0).toFixed(3)}</span>
+                            <span>3️⃣ 최종 가중 결합 및 인구 스케일링</span>
+                            <span class="highlight" style="color:#f59e0b;">${(g.popAdjustedNormMobility || 0).toFixed(3)}</span>
                         </div>
                         <div class="formula">
-                            • 순수 가중 이동성 = 버스(${weightedBusContribution.toFixed(3)}) + 지하철(${weightedSubContribution.toFixed(3)}) = <b>${g.weightedMobility.toFixed(3)}</b><br>
+                            • 총 정규화 이동성 = 버스(${busContrib.toFixed(3)}) + 지하철(${subContrib.toFixed(3)}) = <b>${g.normWeightedMobility.toFixed(3)}</b><br>
                             • 인구 분모 = ln(1 + ${g.pop.toLocaleString()}명) = <b>${lnPop.toFixed(3)}</b><br>
-                            • 최종 산식 = <span style="color:#f59e0b; font-weight:700;">${g.weightedMobility.toFixed(3)} / ${lnPop.toFixed(3)} = ${(g.popAdjustedWeightedMobility || 0).toFixed(3)}</span>
+                            • 인구 고려 최종 수치 = <span style="color:#f59e0b; font-weight:700;">${g.normWeightedMobility.toFixed(3)} / ${lnPop.toFixed(3)} = ${(g.popAdjustedNormMobility || 0).toFixed(3)}</span>
                         </div>
                     </div>
                 </div>
@@ -1380,7 +1353,7 @@ def generate_weighted_transit_html():
     with open(out_html, "w", encoding="utf-8") as f:
         f.write(html_code)
         
-    print(f"[AppBuilder] Successfully generated weighted transit accessibility HTML at: {out_html}")
+    print(f"[AppBuilder] Successfully generated normalized weighted transit accessibility HTML at: {out_html}")
     return out_html
 
 if __name__ == '__main__':
