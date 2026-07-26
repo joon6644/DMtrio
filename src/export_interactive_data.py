@@ -67,15 +67,16 @@ def prepare_and_export_interactive_data():
     print(f"[ExportData] Processed {len(grid_list)} grids.")
     
     # 3. Extract Bus Data
+    if '승하차인원' not in bus_gdf.columns:
+        raise KeyError("[DataIntegrityError] 버스 정류장 데이터(seoul_bus_nodes_5179.geojson)에 필수 컬럼 '승하차인원'이 존재하지 않습니다. 임의 데이터 생성이 금지되어 프로세스를 중단합니다.")
+
     bus_list = []
-    # Mock realistic passengers if not available in columns
-    np.random.seed(42)
     for idx in range(len(bus_gdf)):
         geom_utm = bus_gdf.geometry.iloc[idx]
         geom_wgs = bus_wgs84.geometry.iloc[idx]
         row = bus_gdf.iloc[idx]
         name = str(row.get('BUS_STOP_NAME', row.get('BUS_STOP_N', row.get('ARS_ID', f'정류장_{idx}'))))
-        pass_count = float(row.get('승하차인원', np.random.randint(300, 5000)))
+        pass_count = float(row['승하차인원'])
         
         bus_list.append({
             "id": idx,
@@ -90,6 +91,9 @@ def prepare_and_export_interactive_data():
     print(f"[ExportData] Processed {len(bus_list)} bus stops.")
     
     # 4. Extract Subway Data
+    if '승하차인원' not in subway_gdf.columns:
+        raise KeyError("[DataIntegrityError] 지하철 역사 데이터(seoul_subway_nodes_5179.geojson)에 필수 컬럼 '승하차인원'이 존재하지 않습니다. 임의 데이터 생성이 금지되어 프로세스를 중단합니다.")
+
     subway_list = []
     for idx in range(len(subway_gdf)):
         geom_utm = subway_gdf.geometry.iloc[idx]
@@ -97,7 +101,7 @@ def prepare_and_export_interactive_data():
         row = subway_gdf.iloc[idx]
         name = str(row.get('STATION_NAME', row.get('역사명', f'지하철역_{idx}')))
         line = str(row.get('LINE_NAME', row.get('호선', '')))
-        pass_count = float(row.get('승하차인원', np.random.randint(5000, 60000)))
+        pass_count = float(row['승하차인원'])
         
         subway_list.append({
             "id": idx,
